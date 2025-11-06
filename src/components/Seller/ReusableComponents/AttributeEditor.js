@@ -3,6 +3,7 @@ import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Trash2, Plus } from "lucide-react";
 import styled from "styled-components";
+import { toast } from "react-toastify";
 
 const AttributeCard = styled(motion.div)`
   padding: 20px;
@@ -46,12 +47,48 @@ export const AttributeEditor = ({
     updateAttribute(idx, "allValues", selected ? selected.v_list.map(v => v[1]).filter(v => v && v !== "Not Selected") : []);
   };
 
+  /**
+   * Normalize string for comparison (trim, lowercase, remove spaces)
+   * @param {string} str - String to normalize
+   * @returns {string} Normalized string
+   */
+  const normalizeString = (str) => {
+    if (!str) return '';
+    return str.trim().toLowerCase().replace(/\s+/g, '');
+  };
+
+  /**
+   * Check if a value already exists (case-insensitive, space-insensitive)
+   * @param {string} value - Value to check
+   * @param {string[]} existingValues - Array of existing values
+   * @returns {boolean} True if duplicate exists
+   */
+  const isDuplicateValue = (value, existingValues) => {
+    if (!value || !existingValues || existingValues.length === 0) return false;
+    const normalizedNew = normalizeString(value);
+    return existingValues.some(existing => normalizeString(existing) === normalizedNew);
+  };
+
   const handleAddCustom = () => {
-    if (customValue && !attr.allValues.includes(customValue)) {
-      updateAttribute(idx, "allValues", [...attr.allValues, customValue]);
-      toggleValue(idx, customValue);
+    const trimmedValue = customValue?.trim();
+    
+    if (!trimmedValue) {
+      setCustomValue("");
+      setShowCustomInput(false);
+      return;
     }
-    setCustomValue(""); setShowCustomInput(false);
+
+    // Check for duplicates (case-insensitive, space-insensitive)
+    if (isDuplicateValue(trimmedValue, attr.allValues)) {
+      toast.info(`Variation value "${trimmedValue}" already exists.`);
+      return;
+    }
+
+    // Add the value
+    updateAttribute(idx, "allValues", [...attr.allValues, trimmedValue]);
+    toggleValue(idx, trimmedValue);
+    setCustomValue("");
+    setShowCustomInput(false);
   };
 
   return (

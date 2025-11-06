@@ -41,9 +41,14 @@ const ThumbnailGrid = styled.div`
 const normalizeImage = (image) => {
   if (!image) return null;
   
-  // If it's already in our preferred format { file, url }
-  if (typeof image === 'object' && image.url && (image.file || image.src)) {
-    return image;
+  // If it's already in our preferred format { url, ... } (with or without file)
+  if (typeof image === 'object' && image.url) {
+    return {
+      url: image.url,
+      file: image.file || null,
+      ...(image.type && { type: image.type }),
+      ...(image.image_id && { image_id: image.image_id }),
+    };
   }
   
   // If it's a File object
@@ -92,7 +97,8 @@ export const ImageUploader = ({
   onChange, 
   max = 6, 
   activeImage, 
-  setActiveImage 
+  setActiveImage,
+  uniqueId = '' // ✅ Add uniqueId prop to make input IDs unique
 }) => {
   const fileInputRef = useRef(null);
 
@@ -137,7 +143,7 @@ export const ImageUploader = ({
       }
       
       // Update active image if needed
-      if (activeImage === previousImages[index]?.url) {
+      if (setActiveImage && activeImage === previousImages[index]?.url) {
         setActiveImage(updated[0]?.url || null);
       }
       
@@ -211,7 +217,7 @@ export const ImageUploader = ({
               <img
                 src={img.url}
                 alt=""
-                onClick={() => setActiveImage(img.url)}
+                onClick={() => setActiveImage && setActiveImage(img.url)}
                 style={{ width: "100%", height: "100%", objectFit: "cover" }}
               />
               <button
@@ -232,7 +238,7 @@ export const ImageUploader = ({
                 <X size={12} color="#d33" />
               </button>
               <label
-                htmlFor={`replace-${i}`}
+                htmlFor={`replace-${uniqueId}-${i}`}
                 style={{
                   position: "absolute",
                   bottom: 2,
@@ -252,7 +258,7 @@ export const ImageUploader = ({
                 +
               </label>
               <input
-                id={`replace-${i}`}
+                id={`replace-${uniqueId}-${i}`}
                 type="file"
                 accept="image/*"
                 style={{ display: "none" }}

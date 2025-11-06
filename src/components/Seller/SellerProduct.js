@@ -13,6 +13,7 @@ import { MdOutlineRemoveRedEye } from 'react-icons/md';
 import { LuListX } from "react-icons/lu";
 import { Ban, ListPlus, SquarePen } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { useCustomerAuth } from '../../contexts/CustomerAuthContext';
 
 const PageContainer = styled.div`
   background: #f8fafc;
@@ -58,22 +59,22 @@ const AddButton = styled(motion.button)`
   }
 `;
 
-  const handleDeletePolicy = (policy) => {
-    console.log("delete button clicked")
-  };
+const handleDeletePolicy = (policy) => {
+  console.log("delete button clicked")
+};
 
 const SellerProduct = () => {
-    const [showAddModal, setShowAddModal] = useState(false);
-	const [selectedProductData, setSelectedProductData] = useState(null);
-    const [showDiscountModal,setShowDiscountModal] = useState(false)
-    const [stockActiveModal,setStockActiveModal] = useState(false)
-	const [product, setProduct] = useState([]);
-	const [categoryList, setCategoryList] = useState([]);
+  const { productList: product, getProductDetailsList } = useCustomerAuth();
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [selectedProductData, setSelectedProductData] = useState(null);
+  const [showDiscountModal, setShowDiscountModal] = useState(false)
+  const [stockActiveModal, setStockActiveModal] = useState(false)
+  const [categoryList, setCategoryList] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const navigate = useNavigate();
 
-    const columns = [
+  const columns = [
     { key: 'image', title: 'Product', type: 'image', accessor: r => r.image },
     { key: 'product_name', title: 'Product Name', type: 'text' },
     { key: 'selling_price', title: 'Price', type: 'text', accessor: r => `₹${r.selling_price}` },
@@ -87,7 +88,7 @@ const SellerProduct = () => {
           icon: MdOutlineRemoveRedEye,
           onClick: (row) => { console.log(row) },
           size: "md",
-    
+
         }
       ],
       menuItems: [
@@ -99,7 +100,7 @@ const SellerProduct = () => {
         {
           label: (row) => (row.variations?.length ?? 0) === 0 ? 'Add Variation' : 'Edit Variation',
           icon: ListPlus,
-          onClick: (row) => { 
+          onClick: (row) => {
             const mode = (row.variations?.length ?? 0) === 0 ? 'add' : 'edit';
             handleAddVariation(row, mode);
           }
@@ -112,21 +113,6 @@ const SellerProduct = () => {
       ]
     }
   ]
-
-      const fetchData = async () => {
-        // const seller_ref_code = localStorage.getItem("customerRefCode")
-    try {
-      setLoading(true);
-      const response = await getProductDetailList();
-      // const filteredList = response.filter((item) => item?.seller_data?.cust_ref_code === seller_ref_code);
-      setProduct(response);
-    } catch (err) {
-      setError("Failed to fetch data. Please try again.");
-      console.error(err);
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const fetchCategoryData = async () => {
     try {
@@ -142,26 +128,26 @@ const SellerProduct = () => {
     }
   };
 
-    const handleEditProduct = (product) => {
-        setSelectedProductData(product);
-        navigate("/seller-EditProduct", { state: { productData: product} });
-        // console.log(product)
-    };
-    const handleAddVariation = (product) => {
-        setSelectedProductData(product);
-        navigate("/seller-AddVariation", { state: { productData: product} });
-        // console.log(product)
-    };
+  const handleEditProduct = (product) => {
+    setSelectedProductData(product);
+    navigate("/seller-EditProduct", { state: { productData: product } });
+    // console.log(product)
+  };
+  const handleAddVariation = (product) => {
+    setSelectedProductData(product);
+    navigate("/seller-AddVariation", { state: { productData: product } });
+    // console.log(product)
+  };
 
   useEffect(() => {
-      fetchData();
-      fetchCategoryData();
-    }, []);
+    getProductDetailsList();
+    fetchCategoryData();
+  }, []);
   return (
     <CustomerLayout>
-       <>
-      <PageContainer>
-        {/* <DataTable
+      <>
+        <PageContainer>
+          {/* <DataTable
           spiritual={true}
           data={product}
           columns={columns}
@@ -177,73 +163,75 @@ const SellerProduct = () => {
           ButtonLable="Change Product Visibility"
         /> */}
 
-<div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" ,marginBottom: "10px"}}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "10px" }}>
 
-<PageHeader>Product List</PageHeader>
+            <PageHeader>Product List</PageHeader>
 
             <AddButton
-              onClick={() =>  navigate("/seller-AddProduct")}
+              onClick={() => navigate("/seller-AddProduct")}
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
             >
               <FiPlus />
               Add New Product
             </AddButton>
-</div>
+          </div>
 
 
-       <SellerDataTable
-  columns={columns}
-  data={product}
-  filters={{
-    search: { placeholder: 'Search by name or SKU...', keys: ['product_name', 'sku'] },
-    selects: [
-      { id: 'status', label: 'Status', key: 'status', options: [
-        { label: 'Active', value: 'active' },
-        { label: 'Inactive', value: 'inactive' },
-        { label: 'Pending', value: 'pending' }
-      ] }
-    ],
-  }}
-  pagination={{ pageSize: 10, pageSizeOptions: [10, 20, 50] }}
-/>
-
-      </PageContainer>
-
-      <AnimatePresence>
-        {showAddModal && (
-          <AddProductModalSeller
-            // policy={selectedPolicy}
-            onClose={() => setShowAddModal(false)}
-             onSuccess={() => {setShowAddModal(false);fetchData();}}
-             product = {product}
-             selectedProduct={selectedProductData}
+          <SellerDataTable
+            columns={columns}
+            data={product}
+            filters={{
+              search: { placeholder: 'Search by name or SKU...', keys: ['product_name', 'sku'] },
+              selects: [
+                {
+                  id: 'status', label: 'Status', key: 'status', options: [
+                    { label: 'Active', value: 'active' },
+                    { label: 'Inactive', value: 'inactive' },
+                    { label: 'Pending', value: 'pending' }
+                  ]
+                }
+              ],
+            }}
+            pagination={{ pageSize: 10, pageSizeOptions: [10, 20, 50] }}
           />
-        )}
-      </AnimatePresence>
 
-      <AnimatePresence>
-        {showDiscountModal && (
-          <AddDicountProductModal
-            // policy={selectedPolicy}
-            onClose={() => setShowDiscountModal(false)}
-             onSuccess={() => {setShowDiscountModal(false)}}
-             product = {product}
-          />
-        )}
-      </AnimatePresence>
+        </PageContainer>
 
-      <AnimatePresence>
-        {stockActiveModal && (
-          <ProductStockAvalibility
-            // policy={selectedPolicy}
-            product = {product}
-            onClose={() => setStockActiveModal(false)}
-             onSuccess={() => {setStockActiveModal(false)}}
-          />
-        )}
-      </AnimatePresence>
-    </>
+        {/* <AnimatePresence>
+          {showAddModal && (
+            <AddProductModalSeller
+              // policy={selectedPolicy}
+              onClose={() => setShowAddModal(false)}
+              onSuccess={() => { setShowAddModal(false); fetchData(); }}
+              product={product}
+              selectedProduct={selectedProductData}
+            />
+          )}
+        </AnimatePresence> */}
+
+        <AnimatePresence>
+          {showDiscountModal && (
+            <AddDicountProductModal
+              // policy={selectedPolicy}
+              onClose={() => setShowDiscountModal(false)}
+              onSuccess={() => { setShowDiscountModal(false) }}
+              product={product}
+            />
+          )}
+        </AnimatePresence>
+
+        <AnimatePresence>
+          {stockActiveModal && (
+            <ProductStockAvalibility
+              // policy={selectedPolicy}
+              product={product}
+              onClose={() => setStockActiveModal(false)}
+              onSuccess={() => { setStockActiveModal(false) }}
+            />
+          )}
+        </AnimatePresence>
+      </>
     </CustomerLayout>
   )
 }

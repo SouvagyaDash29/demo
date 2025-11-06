@@ -394,12 +394,11 @@ export const getSellerProductList = async () => {
   }
 };
 
-export const getProductDetailList = async () => {
+export const getProductDetailList = async (key, value) => {
   const token =
     localStorage.getItem("userToken") || localStorage.getItem("customerToken");
-    const seller_code = localStorage.getItem("customerRefCode")
   try {
-    const url = `${PRODUCT_BASE_URL}/get_product_detail_list/?seller_code=${seller_code}`;
+    const url = `${PRODUCT_BASE_URL}/get_product_detail_list/?${key}=${value}`;
     const config = {};
     if (token) {
       config.headers = { Authorization: `Token ${token}` };

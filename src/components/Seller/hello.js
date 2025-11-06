@@ -3,8 +3,8 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import CustomerLayout from '../Customer/CustomerLayout';
 import { motion, AnimatePresence } from 'framer-motion';
 import styled from 'styled-components';
-import { Plus, Check, ChevronRight, AlertCircle, Info, X as XIcon } from 'lucide-react';
-import { getProductDetailList, getVariationList, processProductVariations, ProcessProductImages } from '../../services/customerServices';
+import { Plus, Check, ChevronRight, AlertCircle, Info } from 'lucide-react';
+import { getProductDetailList, getVariationList, processProductVariations } from '../../services/customerServices';
 import { useLocation } from 'react-router-dom';
 import { AttributeEditor } from './ReusableComponents/AttributeEditor';
 import { ImageUploader } from './ReusableComponents/ImageUploader';
@@ -193,75 +193,6 @@ const InfoContent = styled.div`
   flex: 1;
 `;
 
-// Image Modal Styled Components
-const ModalOverlay = styled(motion.div)`
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(0, 0, 0, 0.75);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 1000;
-  padding: 20px;
-`;
-
-const ModalContent = styled(motion.div)`
-  background: white;
-  border-radius: 16px;
-  max-width: 90vw;
-  max-height: 90vh;
-  position: relative;
-  overflow: hidden;
-`;
-
-const ModalHeader = styled.div`
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 16px 24px;
-  border-bottom: 1px solid #e5e7eb;
-`;
-
-const ModalImageContainer = styled.div`
-  padding: 24px;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  max-height: 70vh;
-  overflow: auto;
-`;
-
-const ModalImage = styled.img`
-  max-width: 100%;
-  max-height: 70vh;
-  object-fit: contain;
-  border-radius: 8px;
-`;
-
-const ModalThumbnails = styled.div`
-  display: flex;
-  gap: 8px;
-  padding: 16px 24px;
-  border-top: 1px solid #e5e7eb;
-  overflow-x: auto;
-`;
-
-const Thumbnail = styled.img`
-  width: 60px;
-  height: 60px;
-  object-fit: cover;
-  border-radius: 8px;
-  cursor: pointer;
-  border: 2px solid ${props => props.$active ? '#0008ff' : 'transparent'};
-  
-  &:hover {
-    opacity: 0.8;
-  }
-`;
-
 // Reusable Variation Row
 const VariationRow = ({ v, attributes, selectedVariations, toggleVariationSelect, updateVariation, calculateAdditionalPrice, primaryAttribute, imagesByValue }) => {
   const add = calculateAdditionalPrice(v);
@@ -305,92 +236,36 @@ const VariationRow = ({ v, attributes, selectedVariations, toggleVariationSelect
   );
 };
 
-/**
- * ✅ Build FormData maintaining positional indices
- * IMPORTANT: Only send File objects for images that were actually updated
- * For unchanged existing images, send the URL string
- * 
- * Rules:
- * - If image has File object → it was updated → send File
- * - If image has URL but no File → it's unchanged → send URL string
- * - Maintain positional indices: image_file (0), image_file_1 (1), ..., image_file_9 (9)
- * 
- * @param {Object} params
- * @param {string} params.call_mode - "ADD_VARIATION" or "UPDATE_VARIATION"
- * @param {number} params.image_id - Variation value ID (optional)
- * @param {Array} params.images - Array of image objects/strings
- * @param {Array} params.originalImages - Original images for comparison (optional)
- * @returns {FormData} FormData with positional image keys
- */
-const buildFormDataForValue = ({ call_mode, image_id, images = [], originalImages = [] }) => {
+  // 1. helper: append files to FormData with image_file, image_file_1...image_file_9
+const appendImagesToFormData = (fd, files) => {
+  files.slice(0, 10).forEach((file, i) => {
+    const key = i === 0 ? "image_file" : `image_file_${i}`;
+    fd.append(key, file);
+  });
+};
+
+// 2. helper: build FormData for each variation value
+const buildFormDataForValue = ({ call_mode, v_val_id, files = [] }) => {
   const fd = new FormData();
   fd.append("call_mode", call_mode);
-  if (image_id) fd.append("image_id", image_id);
-  
-  // Process up to 10 images maintaining their positional index
-  images.slice(0, 10).forEach((img, index) => {
-    // Skip null/undefined/empty images
-    if (!img) return;
-    
-    const key = index === 0 ? "image_file" : `image_file_${index}`;
-    
-    // Extract current image URL
-    const imgUrl = typeof img === 'string' ? img : img?.url;
-    
-    // Extract original image URL (for comparison)
-    const originalImg = originalImages[index];
-    const originalUrl = typeof originalImg === 'string' ? originalImg : originalImg?.url;
-    
-    // ✅ RULE: If image has a File object → it was updated → send File only
-    if (img.file instanceof File) {
-      fd.append(key, img.file);
-    }
-    // ✅ RULE: If image is unchanged (has URL, no File, matches original) → send URL string
-    else if (imgUrl && typeof imgUrl === 'string' && imgUrl === originalUrl) {
-      fd.append(key, imgUrl);
-    }
-    // ✅ RULE: If it's a new image (has URL but no original at this position) → send URL string
-    else if (imgUrl && typeof imgUrl === 'string' && !originalUrl) {
-      fd.append(key, imgUrl);
-    }
-    // ✅ Fallback: Handle direct string URLs
-    else if (typeof img === 'string') {
-      fd.append(key, img);
-    }
-  });
-  
+  if (v_val_id) fd.append("v_val_id", v_val_id);
+  appendImagesToFormData(fd, files);
   return fd;
 };
 
-/**
- * Upload variation images using ProcessProductImages API
- * @param {FormData} formData - FormData with call_mode, image_id, and image files
- * @returns {Promise} API response
- */
+// 3. Dummy API (Replace with real API)
 const uploadVariationImagesAPI = async (formData) => {
-  try {
-    // const response = await ProcessProductImages(formData);
-    // return response;
-    console.log("FORM DATA SENT TO SERVER:");
-    for (let p of formData.entries()) console.log(p[0], " => ", p[1]);
-    return Promise.resolve({ status: 200 });
-  } catch (error) {
-    console.error("Image upload failed:", error);
-    throw error;
-  }
+  console.log("FORM DATA SENT TO SERVER:");
+  for (let p of formData.entries()) console.log(p[0], " => ", p[1]);
+  return Promise.resolve({ status: 200 });
 };
 
 const AddVariation = () => {
-  const location = useLocation();
-  const productData = useMemo(() => location.state?.productData || {}, [location.state?.productData]);
-  const [currentProductData, setCurrentProductData] = useState(productData);
-  
-  // ✅ Compute variationMode based on currentProductData (updates after API refresh)
-  const variationMode = useMemo(() => {
-    return (currentProductData?.variations?.length ?? 0) > 0 ? "edit" : "add";
-  }, [currentProductData]);
-  
-  const basePrice = parseFloat(currentProductData.selling_price) || 0;
+const location = useLocation();
+const productData = useMemo(() => location.state?.productData || {}, [location.state?.productData]);
+const [currentProductData, setCurrentProductData] = useState(productData);
+const variationMode = (productData?.variations?.length ?? 0) > 0 ? "edit" : "add";
+  const basePrice = parseFloat(productData.selling_price) || 0;
 
   const [step, setStep] = useState(1);
   const [attributes, setAttributes] = useState([]);
@@ -404,10 +279,6 @@ const AddVariation = () => {
   const [imagesByValue, setImagesByValue] = useState({});
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [vValIdByValue, setVValIdByValue] = useState({});
-  const [activeImageByValue, setActiveImageByValue] = useState({});
-  const [showImageModal, setShowImageModal] = useState(false);
-  const [modalImages, setModalImages] = useState([]);
-  const [modalValue, setModalValue] = useState(null);
   // console.log(JSON.stringify(productData))
   // console.log(variationMode)
 
@@ -421,15 +292,11 @@ const AddVariation = () => {
 
 
 
-/**
- * Initialize attributes from productData when in EDIT mode
- * Updates when currentProductData or variationList changes
- */
 useEffect(() => {
-  if (variationMode !== "edit" || !currentProductData?.variations || variationList.length === 0) return;
+  if (variationMode !== "edit" || !productData?.variations || variationList.length === 0) return;
 
   const vValMap = {};
-  const formattedAttributes = currentProductData.variations.map(variation => {
+  const formattedAttributes = productData.variations.map(variation => {
     const meta = variationList.find(v => v.name === variation.name);
 
     const allValues = [
@@ -442,11 +309,8 @@ useEffect(() => {
       .map(v => v.value);
 
     const valuePrices = {};
-    const valueDiscounts = {};
-    
     variation.product_variations.forEach(v => {
       valuePrices[v.value] = parseFloat(v.additional_price) || 0;
-      valueDiscounts[v.value] = parseFloat(v.discount) || 0;
       vValMap[v.value] = v.id; // ✅ store backend v_val_id mapping
     });
 
@@ -456,9 +320,9 @@ useEffect(() => {
       allValues: [...new Set(allValues)],
       selectedValues,
       enabled: variation.product_variations.some(v => Number(v.additional_price) > 0),
-      enabledDiscount: variation.product_variations.some(v => Number(v.discount) > 0),
+      enabledDiscount: false,
       valuePrices,
-      valueDiscounts,
+      valueDiscounts: {},
       valueImages: {},
     };
   });
@@ -467,57 +331,38 @@ useEffect(() => {
   setVValIdByValue(vValMap);          // ✅ assign v_val_id mapping
   setPrimaryIndex(0);                 // default first attr as primary
 
-}, [variationMode, currentProductData, variationList]);
+}, [variationMode, productData, variationList]);
 
-/**
- * Load existing images from productData when in EDIT mode
- * Normalizes AWS URLs to proper format for ImageUploader
- * ✅ FIX: Only load images from the PRIMARY variation attribute to avoid conflicts
- */
-useEffect(() => {
-  if (variationMode !== "edit" || !currentProductData?.variations || attributes.length === 0) return;
+  useEffect(() => {
+    if (variationMode !== "edit" || !productData?.variations) return;
 
-  const map = {};
-  const primaryAttr = attributes[primaryIndex !== null ? primaryIndex : 0];
-  
-  // Only load images from the primary variation attribute
-  if (primaryAttr) {
-    const primaryVariation = currentProductData.variations.find(
-      v => v.name === primaryAttr.name
-    );
-    
-    if (primaryVariation) {
-      primaryVariation.product_variations.forEach(vv => {
+    const map = {};
+
+    productData.variations.forEach(variation => {
+      variation.product_variations.forEach(vv => {
         const value = vv.value;
 
         if (!map[value]) map[value] = [];
 
         if (Array.isArray(vv.c_images)) {
           vv.c_images.forEach(imgUrl => {
-            // Normalize AWS URLs - ImageUploader handles string URLs
-            // Store as object with url property for consistency
             map[value].push({
               url: imgUrl,
               type: "EXISTING",
-              image_id: vv.id,
-              file: null, // No file for existing images
+              v_val_id: vv.id,
             });
           });
         }
       });
-    }
-  }
+    });
 
-  setImagesByValue(map);
-}, [variationMode, currentProductData, attributes, primaryIndex]);
+    setImagesByValue(map);
+  }, [variationMode, productData]);
 
-/**
- * Snapshot of original attributes for change detection in EDIT mode
- */
 const originalAttributesSnapshot = useMemo(() => {
   if (variationMode !== "edit") return null;
 
-  return currentProductData.variations?.map((v) => {
+  return productData.variations?.map((v) => {
     const meta = variationList.find((m) => m.name === v.name);
 
     const selected = v.product_variations
@@ -545,75 +390,15 @@ const originalAttributesSnapshot = useMemo(() => {
       enabled: v.product_variations.some((pv) => Number(pv.additional_price) > 0),
     };
   });
-}, [currentProductData, variationList, variationMode]);
+}, [productData, variationList, variationMode]);
 
 
-/**
- * ✅ Deep comparison helper for change detection
- * Sorts arrays and compares values, prices, discounts, and flags
- */
-const deepCompareAttributes = (current, original) => {
-  if (!original || original.length !== current.length) return false;
-
-  // Sort by name for consistent comparison
-  const sortedCurrent = [...current].sort((a, b) => a.name.localeCompare(b.name));
-  const sortedOriginal = [...original].sort((a, b) => a.name.localeCompare(b.name));
-
-  for (let i = 0; i < sortedCurrent.length; i++) {
-    const curr = sortedCurrent[i];
-    const orig = sortedOriginal[i];
-
-    // Compare basic properties
-    if (curr.name !== orig.name || 
-        curr.variation_name_id !== orig.variation_name_id ||
-        curr.enabled !== orig.enabled ||
-        curr.enabledDiscount !== orig.enabledDiscount) {
-      return false;
-    }
-
-    // Compare selectedValues (sorted)
-    const currValues = [...curr.selectedValues].sort();
-    const origValues = [...orig.selectedValues].sort();
-    if (JSON.stringify(currValues) !== JSON.stringify(origValues)) {
-      return false;
-    }
-
-    // Compare valuePrices (all values must match)
-    const allValueKeys = [...new Set([...Object.keys(curr.valuePrices), ...Object.keys(orig.valuePrices)])];
-    for (const key of allValueKeys) {
-      const currPrice = Number(curr.valuePrices[key] || 0);
-      const origPrice = Number(orig.valuePrices[key] || 0);
-      if (currPrice !== origPrice) {
-        return false;
-      }
-    }
-
-    // Compare valueDiscounts (all values must match)
-    const allDiscountKeys = [...new Set([...Object.keys(curr.valueDiscounts), ...Object.keys(orig.valueDiscounts)])];
-    for (const key of allDiscountKeys) {
-      const currDiscount = Number(curr.valueDiscounts[key] || 0);
-      const origDiscount = Number(orig.valueDiscounts[key] || 0);
-      if (currDiscount !== origDiscount) {
-        return false;
-      }
-    }
-  }
-
-  return true;
-};
-
-/**
- * ✅ Smart change detection - only detects real changes
- * Handles unchecking and re-checking the same values correctly
- */
 const hasAttributeChanges = useMemo(() => {
   if (variationMode !== "edit") {
     return attributes.some((a) => a.selectedValues.length > 0);
   }
 
-  if (!originalAttributesSnapshot || originalAttributesSnapshot.length === 0) {
-    return attributes.some((a) => a.selectedValues.length > 0);
-  }
+  if (!originalAttributesSnapshot) return false;
 
   const simplifiedCurrent = attributes.map((a) => ({
     name: a.name,
@@ -625,7 +410,17 @@ const hasAttributeChanges = useMemo(() => {
     enabledDiscount: a.enabledDiscount,
   }));
 
-  return !deepCompareAttributes(simplifiedCurrent, originalAttributesSnapshot);
+  const simplifiedOriginal = originalAttributesSnapshot.map((a) => ({
+    name: a.name,
+    variation_name_id: a.variation_name_id,
+    selectedValues: a.selectedValues,
+    valuePrices: a.valuePrices,
+    valueDiscounts: a.valueDiscounts,
+    enabled: a.enabled,
+    enabledDiscount: a.enabledDiscount,
+  }));
+
+  return JSON.stringify(simplifiedCurrent) !== JSON.stringify(simplifiedOriginal);
 }, [attributes, originalAttributesSnapshot, variationMode]);
 
 
@@ -647,9 +442,9 @@ const hasAttributeChanges = useMemo(() => {
             selectedValues: [],
             valuePrices: {},
             valueDiscounts: {},
-            enabled: false,
-            enabledDiscount: false,
-            enabledImages: false,
+            // enabled: false,
+            // enabledDiscount: false,
+            // enabledImages: false,
             valueImages: {},
           };
         }
@@ -733,12 +528,12 @@ const hasAttributeChanges = useMemo(() => {
       ...c,
       price: basePrice,
       stock: "",
-      sku: `${currentProductData.product_code || 'PRD'}-${i + 1}`,
+      sku: `${productData.product_code || 'PRD'}-${i + 1}`,
     }));
 
     setVariations(newVars);
     setStep(2);
-}, [attributes, basePrice, currentProductData]);
+}, [attributes, basePrice, productData]);
 
   const calculateAdditionalPrice = useCallback((variation) => {
     return attributes.reduce((sum, attr) => {
@@ -798,14 +593,10 @@ const hasAttributeChanges = useMemo(() => {
 //     ...(isEdit && originalValues[value] !== undefined && { is_active: true })
 //   }));
 
-/**
- * ✅ DRY Payload Generator
- * Generates payload for both ADD and UPDATE modes according to API specification
- */
+// ✅ Main Payload Generator
 const generatePayload = useCallback(() => {
   const isEdit = variationMode === "edit";
 
-  // Build mapping of original variation data for UPDATE mode
   const original = (currentProductData?.variations || []).reduce((acc, v) => {
     acc[v.name] = {
       id: v.id,
@@ -814,34 +605,20 @@ const generatePayload = useCallback(() => {
     return acc;
   }, {});
 
-  /**
-   * Build value list for a single attribute
-   * In ADD mode: no id field
-   * In UPDATE mode: includes id for existing values, null for new values
-   */
   const buildValueList = (attr, originalValues) =>
-    attr.selectedValues.map(value => {
-      const baseValue = {
-        value,
-        additional_price: Number(attr.valuePrices[value]) || 0,
-        is_discounted: !!(
-          attr.enabledDiscount &&
-          Number(attr.valueDiscounts?.[value]) > 0
-        ),
-        discount: Number(attr.valueDiscounts?.[value]) || 0,
-      };
-
-      if (isEdit) {
-        // UPDATE mode: include id (null for new values, existing id for updates)
-        baseValue.id = originalValues?.[value] ?? null;
-        // Include is_active for existing values
-        if (originalValues?.[value] !== undefined) {
-          baseValue.is_active = true;
-        }
-      }
-
-      return baseValue;
-    });
+    attr.selectedValues.map(value => ({
+      id: isEdit ? (originalValues?.[value] ?? null) : undefined,
+      value,
+      additional_price: Number(attr.valuePrices[value]) || 0,
+      is_discounted: !!(
+        attr.enabledDiscount &&
+        Number(attr.valueDiscounts?.[value]) > 0
+      ),
+      discount: Number(attr.valueDiscounts?.[value]) || 0,
+      ...(isEdit && originalValues?.[value] !== undefined && {
+        is_active: true
+      })
+    }));
 
   return {
     variation_data: {
@@ -849,312 +626,71 @@ const generatePayload = useCallback(() => {
       product_code: currentProductData.product_code,
       product_variation_list: attributes
         .filter(a => a.selectedValues.length > 0)
-        .map(attr => {
-          const baseAttr = {
-            variation_name_id: attr.variation_name_id,
-            is_primary_one: attr.name === attributes[primaryIndex]?.name,
-            v_value_list: buildValueList(attr, original?.[attr.name]?.values)
-          };
-
-          if (isEdit) {
-            // UPDATE mode: include id and is_active
-            baseAttr.id = original?.[attr.name]?.id ?? null;
-            if (original?.[attr.name]?.id) {
-              baseAttr.is_active = true;
-            }
-          }
-
-          return baseAttr;
-        })
+        .map(attr => ({
+          ...(isEdit && { id: original?.[attr.name]?.id ?? null }),
+          variation_name_id: attr.variation_name_id,
+          is_primary_one: attr.name === attributes[primaryIndex]?.name,
+          ...(isEdit && original?.[attr.name]?.id && { is_active: true }),
+          v_value_list: buildValueList(attr, original?.[attr.name]?.values)
+        }))
     }
   };
 }, [attributes, primaryIndex, variationMode, currentProductData]);
 
 
 
-/**
- * Show confirmation modal before generating variations
- */
-const handleGenerateConfirm = () => setShowConfirmModal(true);
+  const handleGenerateConfirm = () => setShowConfirmModal(true)
 
-/**
- * ✅ Confirm and process variation generation
- * Handles both ADD and UPDATE modes
- */
 const confirmGenerate = async () => {
   const payload = generatePayload();
-  console.log("PAYLOAD SENT:", JSON.stringify(payload, null, 2));
+  console.log("PAYLOAD SENT:", JSON.stringify(payload));
 
   try {
-    const res = await processProductVariations(payload);
-    
-    // Check response status
-    if (res?.status !== 200 && res?.status !== undefined) {
-      throw new Error("Variation processing failed. Please try again.");
-    }
+    const res = await processProductVariations(payload); // ✅ Call your real API
+     toast.success("Variation Add Successfully!");
+              // if (onSuccess) onSuccess();
+              if (res.status !== 200) {
+                throw new Error("Registration failed. Please try again.");
+              }
+     const response = await getProductDetailList();
 
-    toast.success(
-      variationMode === "add" 
-        ? "Variations added successfully!" 
-        : "Variations updated successfully!"
-    );
 
-    // ✅ Refresh product data with proper parameters
-    const refreshedData = await getProductDetailList(
-      "product_code", 
-      currentProductData.product_code
-    );
+    setCurrentProductData(response);
     
-    setCurrentProductData(refreshedData);
-    
-    // ✅ Update vValIdByValue mapping after refresh
-    if (refreshedData?.variations) {
-      const vValMap = {};
-      refreshedData.variations.forEach(variation => {
-        variation.product_variations.forEach(vv => {
-          vValMap[vv.value] = vv.id;
-        });
-      });
-      setVValIdByValue(vValMap);
-    }
-    
-    // Move to step 2 and generate variations table
-    setStep(2);
+    // Move to step 2 after updating variations
+    setStep(2)
     generateVariations();
     setShowConfirmModal(false);
 
   } catch (e) {
-    console.error("Variation processing failed → ", e);
-    toast.error(e?.message || "Failed to process variations. Please try again.");
+    console.error("Variation update failed → ", e);
   }
 };
 
-/**
- * ✅ Upload variation images for primary attribute values
- * Maintains positional indices: image_file (0), image_file_1 (1), ..., image_file_9 (9)
- * Sends File objects for updated images, URL strings for unchanged existing images
- */
-const handleSaveImages = async () => {
-  const primary = attributes[primaryIndex];
-  if (!primary) {
-    toast.warning("Please select a primary variation first.");
-    return;
-  }
+    // === Upload Images (Uses v_val_id from productData) ===
+  const handleSaveImages = async () => {
+    const primary = attributes[primaryIndex];
+    if (!primary) return;
 
-  let successCount = 0;
-  let errorCount = 0;
-  let hasChanges = false;
-
-  try {
-    // ✅ FIX: Filter by PRIMARY variation attribute name first
-    const primaryVariation = (currentProductData?.variations || []).find(
-      v => v.name === primary.name
-    );
-    
-    if (!primaryVariation) {
-      toast.error(`Primary variation "${primary.name}" not found in product data.`);
-      return;
-    }
-    
-    // ✅ Process each value with its index to ensure correct matching
-    for (let valueIndex = 0; valueIndex < primary.selectedValues.length; valueIndex++) {
-      const value = primary.selectedValues[valueIndex];
+    for (const value of primary.selectedValues) {
       const imgs = imagesByValue[value] || [];
-      
-      // ✅ CRITICAL FIX: Get original product_variation for THIS specific value
-      // First try exact match, then try by index position as fallback
-      let originalProductVariation = primaryVariation.product_variations?.find(
-        pv => String(pv.value).trim() === String(value).trim()
-      );
-      
-      // Fallback: If exact match fails, try by index position (in case values are reordered)
-      if (!originalProductVariation && primaryVariation.product_variations?.length > valueIndex) {
-        const byIndex = primaryVariation.product_variations[valueIndex];
-        if (String(byIndex?.value).trim() === String(value).trim()) {
-          originalProductVariation = byIndex;
-        }
-      }
-      
-      if (!originalProductVariation && variationMode === "edit") {
-        console.error(`❌ No product_variation found for value "${value}" (index ${valueIndex}) in primary "${primary.name}"`);
-        console.error('Current value:', value);
-        console.error('Available product_variations:', primaryVariation.product_variations?.map((pv, idx) => ({
-          index: idx,
-          id: pv.id,
-          value: pv.value
-        })));
-        toast.error(`Cannot find variation for "${value}". Please refresh and try again.`);
-        continue; // Skip this value
-      }
-      
-      const originalImages = originalProductVariation?.c_images?.map(url => ({ 
-        url, 
-        type: "EXISTING" 
-      })) || [];
-      
-      // Check if there are any changes (new files, removed images, or reordered images)
-      const hasNewFiles = imgs.some(img => img?.file instanceof File);
-      
-      // Check if images were removed (current count < original count)
-      const hasRemovedImages = imgs.length < originalImages.length;
-      
-      // Check if images were reordered (positions changed)
-      const hasReordered = imgs.length === originalImages.length && 
-        imgs.some((img, idx) => {
-          const imgUrl = img?.url || img;
-          const origUrl = originalImages[idx]?.url;
-          return imgUrl !== origUrl;
-        });
-      
-      // Skip if no changes at all (no new files, no removals, no reordering)
-      if (!hasNewFiles && !hasRemovedImages && !hasReordered && imgs.length === originalImages.length) {
-        continue;
-      }
+      const newFiles = imgs.filter((img) => img?.file instanceof File).map((img) => img.file);
+      if (newFiles.length === 0) continue;
 
-      hasChanges = true;
-
-      // ✅ CRITICAL FIX: Get v_val_id for THIS specific variation value
-      // MUST use originalProductVariation.id - this is the correct ID for this value
-      const image_id = originalProductVariation?.id;
-      
-      if (!image_id && variationMode === "edit") {
-        console.error(`❌ CRITICAL: No image_id found for value "${value}" in primary variation "${primary.name}"`);
-        console.error('Available product_variations:', primaryVariation.product_variations?.map(pv => ({
-          id: pv.id,
-          value: pv.value
-        })));
-        toast.error(`Cannot find variation ID for "${value}". Please refresh and try again.`);
-        continue;
-      }
-      
-      // Determine call_mode based on variation mode and whether image_id exists
-      const call_mode = variationMode === "edit" && image_id 
-        ? "UPDATE_VARIATION" 
-        : "ADD_VARIATION";
-
-      // Debug logging
-      console.log(`Uploading images for variation:`, {
-        primaryAttribute: primary.name,
-        value: value,
-        image_id: image_id,
-        call_mode: call_mode,
-        imagesCount: imgs.length,
-        hasNewFiles: hasNewFiles
-      });
-
-      // Build FormData with all images maintaining positional indices
-      // Only sends File objects for updated images, URL strings for unchanged ones
+      const v_val_id = vValIdByValue[value]; // From productData
       const formData = buildFormDataForValue({
-        call_mode,
-        image_id: image_id || undefined, // Only include if exists
-        images: imgs, // Current images (may include updated Files)
-        originalImages: originalImages, // Original images for comparison
+        call_mode: variationMode === "edit" ? "UPDATE_VARIATION" : "ADD_VARIATION",
+        v_val_id,
+        files: newFiles,
       });
-      
-      // Debug: Log FormData contents
-      console.log(`FormData for ${value}:`);
-      for (let [key, val] of formData.entries()) {
-        console.log(`  ${key}:`, val instanceof File ? `File(${val.name})` : val);
-      }
 
-      try {
-        await uploadVariationImagesAPI(formData);
-        successCount++;
-      } catch (error) {
-        console.error(`Failed to upload images for ${value}:`, error);
-        errorCount++;
-      }
-    } // End of for loop
-
-    if (successCount > 0) {
-      toast.success(`Successfully uploaded images for ${successCount} variation(s).`);
-      
-      // Refresh product data to get updated image URLs
-      const refreshedData = await getProductDetailList(
-        "product_code", 
-        currentProductData.product_code
-      );
-      setCurrentProductData(refreshedData);
+      await uploadVariationImagesAPI(formData); // TODO: Real API
     }
-
-    if (errorCount > 0) {
-      toast.warning(`Failed to upload images for ${errorCount} variation(s).`);
-    }
-
-    if (!hasChanges) {
-      toast.info("No image changes detected.");
-    }
-
-  } catch (error) {
-    console.error("Image upload process failed:", error);
-    toast.error("Failed to upload images. Please try again.");
-  }
-};
+    alert("Images saved successfully");
+  };
 
   const primaryAttribute = primaryIndex !== null ? attributes[primaryIndex] : null;
   const canProceed = attributes.some(a => a.selectedValues.length > 0);
-
-  /**
-   * ✅ Check if there are any image changes across all variation values
-   * Returns true if any variation value has: new files, removed images, or reordered images
-   */
-  const hasImageChanges = useMemo(() => {
-    if (!primaryAttribute) return false;
-
-    // In ADD mode: Show button if any images have been uploaded (have File objects)
-    if (variationMode === "add") {
-      return primaryAttribute.selectedValues.some(value => {
-        const imgs = imagesByValue[value] || [];
-        return imgs.length > 0 && imgs.some(img => img?.file instanceof File);
-      });
-    }
-
-    // In EDIT mode: Compare with original images to detect changes
-    if (variationMode === "edit" && !currentProductData?.variations) {
-      return false;
-    }
-
-    const primaryVariation = currentProductData.variations.find(
-      v => v.name === primaryAttribute.name
-    );
-
-    if (!primaryVariation) return false;
-
-    // Check each variation value for changes
-    for (const value of primaryAttribute.selectedValues) {
-      const imgs = imagesByValue[value] || [];
-      
-      const originalProductVariation = primaryVariation.product_variations?.find(
-        pv => String(pv.value).trim() === String(value).trim()
-      );
-      
-      const originalImages = originalProductVariation?.c_images?.map(url => ({ 
-        url, 
-        type: "EXISTING" 
-      })) || [];
-
-      // Check for new files (uploaded images)
-      const hasNewFiles = imgs.some(img => img?.file instanceof File);
-      
-      // Check if images were removed
-      const hasRemovedImages = imgs.length < originalImages.length;
-      
-      // Check if images were reordered (positions changed)
-      const hasReordered = imgs.length === originalImages.length && 
-        imgs.some((img, idx) => {
-          const imgUrl = img?.url || img;
-          const origUrl = originalImages[idx]?.url;
-          return imgUrl !== origUrl;
-        });
-
-      // If any change detected, return true
-      if (hasNewFiles || hasRemovedImages || hasReordered) {
-        return true;
-      }
-    }
-
-    return false;
-  }, [primaryAttribute, imagesByValue, currentProductData, variationMode]);
 
   return (
     <CustomerLayout>
@@ -1169,39 +705,39 @@ const handleSaveImages = async () => {
               <FormHeader>Product Information</FormHeader>
               <ProductInfoContainer>
                 <ProductImage 
-                  src={currentProductData.image} 
-                  alt={currentProductData.product_name}
+                  src={productData.image} 
+                  alt={productData.product_name}
                   onError={(e) => {
                     e.target.src = 'https://via.placeholder.com/200?text=No+Image';
                   }}
                 />
                 <ProductDetails>
-                  <ProductTitle>{currentProductData.product_name}</ProductTitle>
-                  <ProductCode>{currentProductData.product_code}</ProductCode>
-                  <ProductDescription>{currentProductData.description}</ProductDescription>
+                  <ProductTitle>{productData.product_name}</ProductTitle>
+                  <ProductCode>{productData.product_code}</ProductCode>
+                  <ProductDescription>{productData.description}</ProductDescription>
                   
                   <ProductMetaRow>
                     <MetaItem>
                       <MetaLabel>Base Price</MetaLabel>
-                      <MetaValue>₹{currentProductData.selling_price}</MetaValue>
+                      <MetaValue>₹{productData.selling_price}</MetaValue>
                     </MetaItem>
                     
                     <MetaItem>
                       <MetaLabel>Category</MetaLabel>
-                      <Badge variant="category">{currentProductData.category}</Badge>
+                      <Badge variant="category">{productData.category}</Badge>
                     </MetaItem>
                     
                     <MetaItem>
                       <MetaLabel>Status</MetaLabel>
-                      <Badge variant={currentProductData.is_active ? 'active' : ''}>
-                        {currentProductData.is_active ? 'Active' : 'Inactive'}
+                      <Badge variant={productData.is_active ? 'active' : ''}>
+                        {productData.is_active ? 'Active' : 'Inactive'}
                       </Badge>
                     </MetaItem>
 
-                    {currentProductData.discount > 0 && (
+                    {productData.discount > 0 && (
                       <MetaItem>
                         <MetaLabel>Discount</MetaLabel>
-                        <MetaValue>{currentProductData.discount}%</MetaValue>
+                        <MetaValue>{productData.discount}%</MetaValue>
                       </MetaItem>
                     )}
                   </ProductMetaRow>
@@ -1305,11 +841,7 @@ const handleSaveImages = async () => {
             <Card>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                 <FormHeader>Upload Variation Images</FormHeader>
-                <Button onClick={() => {
-                  // ✅ When going back from Step 2, ensure Edit mode is active
-                  // variationMode will automatically be "edit" if variations exist
-                  setStep(1);
-                }}>← Back</Button>
+                <Button onClick={() => setStep(1)}>← Back</Button>
               </div>
               <p style={{ color: '#64748b', marginBottom: 20 }}>
                 Upload images for each <strong>{primaryAttribute.name}</strong> variation.
@@ -1330,28 +862,12 @@ const handleSaveImages = async () => {
                       handleImageUpload(value, updated);
                     }}
                     max={6}
-                    activeImage={activeImageByValue[value] || null}
-                    setActiveImage={(url) => {
-                      setActiveImageByValue(prev => ({ ...prev, [value]: url }));
-                      // Open modal when image is clicked
-                      const allImages = imagesByValue[value] || [];
-                      setModalImages(allImages);
-                      setModalValue(value);
-                      setShowImageModal(true);
-                    }}
-                    uniqueId={value} // ✅ Pass value as uniqueId to make input IDs unique per variation
                   />
-                </div>
-              ))}
-              
-              {/* ✅ Show save button only if there are image changes */}
-              {hasImageChanges && (
-                <div style={{ marginTop: 16, textAlign: 'center' }}>
-                  <Button primary onClick={handleSaveImages} style={{ padding: "14px 32px", fontSize: 16 }}>
-                    {variationMode === "edit" ? "Update All Images" : "Save All Images"}
+                 <Button primary onClick={handleSaveImages} style={{ padding: "14px 32px", fontSize: 16 }}>
+                    {variationMode === "edit" ? "Update Images" : "Add Images"}
                   </Button>
                 </div>
-              )}
+              ))}
             </Card>
           ) : (
             <Card>
@@ -1442,81 +958,6 @@ const handleSaveImages = async () => {
         value={bulkValue}
         setValue={setBulkValue}
       />
-
-      {/* Image Modal */}
-      <AnimatePresence>
-        {showImageModal && modalImages.length > 0 && (
-          <ModalOverlay
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            onClick={() => setShowImageModal(false)}
-          >
-            <ModalContent
-              initial={{ scale: 0.9, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.9, opacity: 0 }}
-              onClick={(e) => e.stopPropagation()}
-            >
-              <ModalHeader>
-                <h3 style={{ margin: 0, fontSize: 18, fontWeight: 600 }}>
-                  {modalValue ? `Images for ${modalValue}` : 'Image Preview'}
-                </h3>
-                <button
-                  onClick={() => setShowImageModal(false)}
-                  style={{
-                    background: 'none',
-                    border: 'none',
-                    cursor: 'pointer',
-                    padding: 8,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    borderRadius: 8,
-                  }}
-                >
-                  <XIcon size={24} color="#6b7280" />
-                </button>
-              </ModalHeader>
-              <ModalImageContainer>
-                <ModalImage
-                  src={modalValue && activeImageByValue[modalValue] 
-                    ? activeImageByValue[modalValue] 
-                    : (typeof modalImages[0] === 'string' ? modalImages[0] : modalImages[0]?.url || modalImages[0])}
-                  alt="Preview"
-                  onError={(e) => {
-                    e.target.src = 'https://via.placeholder.com/400?text=Image+Not+Found';
-                  }}
-                />
-              </ModalImageContainer>
-              {modalImages.length > 1 && (
-                <ModalThumbnails>
-                  {modalImages.map((img, idx) => {
-                    const imgUrl = typeof img === 'string' ? img : img?.url;
-                    const isActive = modalValue && activeImageByValue[modalValue] === imgUrl;
-                    return (
-                      <Thumbnail
-                        key={idx}
-                        src={imgUrl}
-                        alt={`Thumbnail ${idx + 1}`}
-                        $active={isActive}
-                        onClick={() => {
-                          if (modalValue) {
-                            setActiveImageByValue(prev => ({ ...prev, [modalValue]: imgUrl }));
-                          }
-                        }}
-                        onError={(e) => {
-                          e.target.src = 'https://via.placeholder.com/60?text=Error';
-                        }}
-                      />
-                    );
-                  })}
-                </ModalThumbnails>
-              )}
-            </ModalContent>
-          </ModalOverlay>
-        )}
-      </AnimatePresence>
     </CustomerLayout>
   );
 };

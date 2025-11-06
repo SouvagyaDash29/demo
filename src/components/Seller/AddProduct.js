@@ -1,9 +1,9 @@
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useState, useMemo } from 'react'
 import CustomerLayout from '../Customer/CustomerLayout'
 import styled from 'styled-components';
 import { Eye, Plus, Save, Upload } from 'lucide-react';
 import { ImageUploader } from './ReusableComponents/ImageUploader';
-import { getSellerCategory, processProductData } from '../../services/customerServices';
+import { getSellerCategory, processProductData, ProcessProductImages } from '../../services/customerServices';
 import { toast } from 'react-toastify';
 import { useLocation } from 'react-router-dom';
 
@@ -173,7 +173,11 @@ const AddProduct = () => {
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  const [category, setCategory] = useState([])
+  const [category, setCategory] = useState([]);
+  
+  // ✅ State for additional images (excluding primary image)
+  const [additionalImages, setAdditionalImages] = useState([]);
+  const [originalAdditionalImages, setOriginalAdditionalImages] = useState([]);
 
   // const categories = ["Pooja Items", "Flowers", "Prasad", "Lamps"];
   const base_unit = ["Piece", "Packet", "Kg", "Litre"];
@@ -182,7 +186,24 @@ const AddProduct = () => {
     setFormData((prev) => ({ ...prev, [key]: value }));
   };
 
-    useEffect(() => {
+  // ✅ Load existing additional images (excluding primary image)
+  useEffect(() => {
+    if (productData?.c_images && Array.isArray(productData.c_images)) {
+      const primaryImageUrl = productData.image;
+      // Filter out primary image from additional images
+      const additional = productData.c_images
+        .filter(imgUrl => imgUrl !== primaryImageUrl)
+        .map(url => ({
+          url,
+          type: "EXISTING",
+          file: null
+        }));
+      setAdditionalImages(additional);
+      setOriginalAdditionalImages(additional);
+    }
+  }, [productData]);
+
+  useEffect(() => {
       const fetchData = async () => {
         try {
           setLoading(true);
@@ -253,7 +274,17 @@ const AddProduct = () => {
     
           const response = await processProductData(formDatas);
           // console.log("response",response);
-          toast.success("Product Add Successfully!");
+          toast.success(isEditMode ? "Product Updated Successfully!" : "Product Added Successfully!");
+          
+          // ✅ Store product_id after successful creation/update
+          if (response?.data?.product_id || response?.data?.id) {
+            const productId = response.data.product_id || response.data.id;
+            setFormData((prev) => ({
+              ...prev,
+              product_id: productId
+            }));
+          }
+          
           // if (onSuccess) onSuccess();
           if (response.status !== 200) {
             throw new Error("Registration failed. Please try again.");
@@ -265,6 +296,128 @@ const AddProduct = () => {
           setLoading(false);
         }
       };
+
+  /**
+   * ✅ Build FormData for additional product images
+   * Maintains positional indices: image_file (0), image_file_1 (1), ..., image_file_9 (9)
+   * Only sends File objects for updated images, URL strings for unchanged ones
+   */
+  const buildFormDataForProductImages = ({ call_mode, image_id, images = [], originalImages = [] }) => {
+    const fd = new FormData();
+    fd.append("call_mode", call_mode);
+    if (image_id) fd.append("image_id", image_id);
+    
+    // Process up to 10 images maintaining their positional index
+    images.slice(0, 10).forEach((img, index) => {
+      if (!img) return;
+      
+      const key = index === 0 ? "image_file" : `image_file_${index}`;
+      
+      // Extract current image URL
+      const imgUrl = typeof img === 'string' ? img : img?.url;
+      
+      // Extract original image URL (for comparison)
+      const originalImg = originalImages[index];
+      const originalUrl = typeof originalImg === 'string' ? originalImg : originalImg?.url;
+      
+      // ✅ RULE: If image has a File object → it was updated → send File only
+      if (img.file instanceof File) {
+        fd.append(key, img.file);
+      }
+      // ✅ RULE: If image is unchanged (has URL, no File, matches original) → send URL string
+      else if (imgUrl && typeof imgUrl === 'string' && imgUrl === originalUrl) {
+        fd.append(key, imgUrl);
+      }
+      // ✅ RULE: If it's a new image (has URL but no original at this position) → send URL string
+      else if (imgUrl && typeof imgUrl === 'string' && !originalUrl) {
+        fd.append(key, imgUrl);
+      }
+      // ✅ Fallback: Handle direct string URLs
+      else if (typeof img === 'string') {
+        fd.append(key, img);
+      }
+    });
+    
+    return fd;
+  };
+
+  /**
+   * ✅ Save additional product images
+   */
+  const handleSaveAdditionalImages = async () => {
+    if (!formData.product_id) {
+      toast.error("Please save the product first before adding additional images.");
+      return;
+    }
+
+    try {
+      setLoading(true);
+
+      // Check if there are any changes
+      const hasNewFiles = additionalImages.some(img => img?.file instanceof File);
+      const hasRemovedImages = additionalImages.length < originalAdditionalImages.length;
+      const hasReordered = additionalImages.length === originalAdditionalImages.length && 
+        additionalImages.some((img, idx) => {
+          const imgUrl = img?.url || img;
+          const origUrl = originalAdditionalImages[idx]?.url;
+          return imgUrl !== origUrl;
+        });
+
+      if (!hasNewFiles && !hasRemovedImages && !hasReordered && 
+          additionalImages.length === originalAdditionalImages.length) {
+        toast.info("No image changes detected.");
+        return;
+      }
+
+      const call_mode = isEditMode && originalAdditionalImages.length > 0 
+        ? "UPDATE" 
+        : "ADD";
+
+      const formDataForImages = buildFormDataForProductImages({
+        call_mode,
+        image_id: formData.product_id,
+        images: additionalImages,
+        originalImages: originalAdditionalImages,
+      });
+
+      await ProcessProductImages(formDataForImages);
+      
+      toast.success("Additional images saved successfully!");
+      
+      // Update original images to current state
+      setOriginalAdditionalImages([...additionalImages]);
+      
+    } catch (error) {
+      console.error("Failed to save additional images:", error);
+      toast.error(error?.message || "Failed to save additional images. Please try again.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  /**
+   * ✅ Check if there are any changes in additional images
+   */
+  const hasAdditionalImageChanges = useMemo(() => {
+    if (!formData.product_id) return false;
+
+    // In ADD mode (new product): Show if any images uploaded
+    if (!isEditMode || originalAdditionalImages.length === 0) {
+      return additionalImages.some(img => img?.file instanceof File);
+    }
+
+    // In EDIT mode: Compare with original
+    const hasNewFiles = additionalImages.some(img => img?.file instanceof File);
+    const hasRemovedImages = additionalImages.length < originalAdditionalImages.length;
+    const hasReordered = additionalImages.length === originalAdditionalImages.length && 
+      additionalImages.some((img, idx) => {
+        const imgUrl = img?.url || img;
+        const origUrl = originalAdditionalImages[idx]?.url;
+        return imgUrl !== origUrl;
+      });
+
+    return hasNewFiles || hasRemovedImages || hasReordered;
+  }, [additionalImages, originalAdditionalImages, formData.product_id, isEditMode]);
 
   return (
     <CustomerLayout>
@@ -378,7 +531,9 @@ const AddProduct = () => {
                     Price inclusive tax ?
                   </ToggleLabel>
                   </div>
-                  <ImageUploader
+                  <div>
+                    <Label>Primary Image *</Label>
+                    <ImageUploader
                       images={formData.activeImage ? [formData.activeImage] : []}
                       onChange={(updater) =>
                         setFormData((prev) => {
@@ -395,7 +550,38 @@ const AddProduct = () => {
                       max={1}
                       activeImage={formData.activeImage?.url || formData.activeImage}
                       setActiveImage={(url) => handleInputChange("activeImage", url)}
+                      uniqueId="primary"
                     />
+                  </div>
+
+                  {/* ✅ Additional Images Section */}
+                  {formData.product_id && (
+                    <div>
+                      <FormHeader>Additional Images</FormHeader>
+                      <Label style={{ marginBottom: 12 }}>
+                        Upload up to 10 additional images for this product
+                      </Label>
+                      <ImageUploader
+                        images={additionalImages}
+                        onChange={(updater) => {
+                          const updated = typeof updater === 'function' ? updater(additionalImages) : updater;
+                          setAdditionalImages(updated);
+                        }}
+                        max={10}
+                        uniqueId="additional"
+                      />
+                      
+                      {/* ✅ Show save button only if there are changes */}
+                      {hasAdditionalImageChanges && (
+                        <div style={{ marginTop: 16, textAlign: 'center' }}>
+                          <Button primary onClick={handleSaveAdditionalImages} disabled={loading}>
+                            {isEditMode ? "Update Additional Images" : "Save Additional Images"}
+                          </Button>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
                   <Label>*Note :- If this product have Variation then you can add it product list </Label>
                 </div>
               </Card>
@@ -407,7 +593,12 @@ const AddProduct = () => {
                 <Label>Product Preview</Label>
                 <ImagePreview>
                   {formData.activeImage ? (
-                    <img src={formData.activeImage} alt="Preview" />
+                    <img 
+                      src={typeof formData.activeImage === 'string' 
+                        ? formData.activeImage 
+                        : formData.activeImage?.url || formData.activeImage} 
+                      alt="Preview" 
+                    />
                   ) : (
                     <div style={{ textAlign: "center", color: "#999" }}>
                       <Upload size={32} />

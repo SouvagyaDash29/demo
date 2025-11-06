@@ -6,6 +6,7 @@ import {
   clearCustomerAuth,
   isCustomerAuthenticated,
   getSellerAllList,
+  getProductDetailList,
 } from "../services/customerServices";
 
 const CustomerAuthContext = createContext(null);
@@ -26,6 +27,10 @@ export const CustomerAuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
   const [sellerProfile, setSellerProfile] = useState([]);
   const customerCode = localStorage.getItem("customerRefCode");
+  
+  const [productList, setProductList] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState("");
 
   useEffect(() => {
     checkAuthStatus();
@@ -67,6 +72,20 @@ export const CustomerAuthProvider = ({ children }) => {
     }
   } 
 
+  const getProductDetailsList = async () => {
+    const seller_code = localStorage.getItem("customerRefCode");
+    try {
+      setIsLoading(true);
+      const response = await getProductDetailList("seller_code", seller_code);
+      setProductList(response);
+    } catch (err) {
+      setError("Failed to fetch data. Please try again.");
+      console.error(err);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const value = {
     customerData,
     isAuthenticated,
@@ -74,7 +93,11 @@ export const CustomerAuthProvider = ({ children }) => {
     login,
     logout,
     sellerProfile,
-    getSellerProfile
+    getSellerProfile,
+    getProductDetailsList,
+    productList,
+    isLoading,
+    error
   };
 
   return (
