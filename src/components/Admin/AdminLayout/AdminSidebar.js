@@ -322,6 +322,12 @@ const AdminSidebar = ({
                 badge: null,
               },
               {
+                path: "/catalog-setup",
+                icon: FaPlusSquare,
+                label: "Catalog Setup",
+                badge: null,
+              },
+              {
                 path: "/temple-list",
                 icon: MdTempleHindu,
                 label: "All Temples",

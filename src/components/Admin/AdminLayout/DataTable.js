@@ -9,25 +9,59 @@ import {
   FiEdit,
   FiTrash2,
   FiEye,
+  FiPlus,
 } from "react-icons/fi";
 import { GiLotus, TempleGate } from "react-icons/gi";
 
+// Color themes
+const BLUE_THEME = {
+  primary: "#0056d6",
+  primaryLight: "#cfe0ff",
+  primaryDark: "#0a4db4",
+  secondary: "#d7e4ff",
+  background: "#f3f8ff",
+  accent: "#d64545",
+  success: "#3b82f6",
+  textDark: "#0f172a",
+  textLight: "#3b82f6",
+  border: "#cfe0ff",
+  surface: "#ffffff",
+  hover: "#eaf2ff",
+};
+
+const SPIRITUAL_THEME = {
+  primary: "#d4af37",
+  primaryLight: "#f4e4a6",
+  primaryDark: "#b8941f",
+  secondary: "#e6d2aa",
+  background: "#f8f4e6",
+  accent: "#c44536",
+  success: "#87a96b",
+  textDark: "#2c3e50",
+  textLight: "#3498db",
+  border: "#8b4513",
+  surface: "#fefcf5",
+  hover: "#f4e4a630",
+};
+
+const getColors = (spiritual) => spiritual ? SPIRITUAL_THEME : BLUE_THEME;
+
 const TableContainer = styled.div`
-  background: #ffffff;
+  background: ${props => getColors(props.$spiritual).surface};
   border-radius: 0.75rem;
   overflow: visible;
-  box-shadow: 0 6px 24px rgba(0, 86, 214, 0.08);
-  border: 1px solid #cfe0ff;
+  box-shadow: 0 6px 24px ${props => getColors(props.$spiritual).primary}15;
+  border: 1px solid ${props => getColors(props.$spiritual).primaryLight};
 `;
 
 const TableHeader = styled.div`
   padding: 1.5rem 2rem;
-  border-bottom: 1px solid #cfe0ff;
+  border-bottom: 1px solid ${props => getColors(props.$spiritual).primaryLight};
   display: flex;
   justify-content: space-between;
   align-items: center;
   gap: 1rem;
-  background: #f3f8ff;
+  background: ${props => getColors(props.$spiritual).background};
 
   @media (max-width: 768px) {
     flex-direction: column;
@@ -45,7 +79,7 @@ const SearchContainer = styled.div`
     left: 1rem;
     top: 50%;
     transform: translateY(-50%);
-    color: #6b7280;
+    color: ${props => getColors(props.$spiritual).textDark}80;
     font-size: 1rem;
   }
 `;
@@ -53,21 +87,21 @@ const SearchContainer = styled.div`
 const SearchInput = styled.input`
   width: 100%;
   padding: 0.75rem 1rem 0.75rem 2.5rem;
-  border: 1px solid #e5e7eb;
+  border: 1px solid ${props => getColors(props.$spiritual).primaryLight};
   border-radius: 0.5rem;
   font-size: 0.9rem;
   transition: all 0.2s ease;
-  background: #ffffff;
-  color: #111827;
+  background: ${props => getColors(props.$spiritual).surface};
+  color: ${props => getColors(props.$spiritual).textDark};
 
   &:focus {
     outline: none;
-    border-color: #374151;
-    box-shadow: 0 0 0 3px rgba(17, 24, 39, 0.08);
+    border-color: ${props => getColors(props.$spiritual).primary};
+    box-shadow: 0 0 0 3px ${props => getColors(props.$spiritual).primary}20;
   }
 
   &::placeholder {
-    color: #9ca3af;
+    color: ${props => getColors(props.$spiritual).textDark}60;
     opacity: 0.6;
   }
 `;
@@ -79,15 +113,17 @@ const Table = styled.table`
 `;
 
 const TableHead = styled.thead`
-  background: linear-gradient(180deg, #f6faff 0%, #eaf2ff 100%);
+  background: linear-gradient(180deg, 
+    ${props => getColors(props.$spiritual).background} 0%, 
+    ${props => getColors(props.$spiritual).primaryLight}30 100%);
 
   th {
     padding: 1rem 2rem;
     text-align: left;
     font-weight: 600;
-    color: #0a4db4;
+    color: ${props => getColors(props.$spiritual).primaryDark};
     font-size: 0.9rem;
-    border-bottom: 1px solid #d7e4ff;
+    border-bottom: 1px solid ${props => getColors(props.$spiritual).secondary};
     position: relative;
 
     &:not(:last-child)::after {
@@ -98,24 +134,24 @@ const TableHead = styled.thead`
       transform: translateY(-50%);
       height: 60%;
       width: 1px;
-      background: linear-gradient(to bottom, transparent, #d7e4ff, transparent);
+      background: linear-gradient(to bottom, transparent, ${props => getColors(props.$spiritual).secondary}, transparent);
     }
   }
 `;
 
 const TableBody = styled.tbody`
   tr {
-    border-bottom: 1px solid #e6efff;
+    border-bottom: 1px solid ${props => getColors(props.$spiritual).primaryLight}50;
     transition: background-color 0.2s;
-    background: #ffffff;
+    background: ${props => getColors(props.$spiritual).surface};
     position: relative;
 
     &:nth-child(even) {
-      background: #f6faff;
+      background: ${props => getColors(props.$spiritual).background};
     }
 
     &:hover {
-      background: #eaf2ff;
+      background: ${props => getColors(props.$spiritual).hover};
     }
 
     &:last-child {
@@ -125,7 +161,7 @@ const TableBody = styled.tbody`
 
   td {
     padding: 1rem 2rem;
-    color: #0f172a;
+    color: ${props => getColors(props.$spiritual).textDark};
     font-size: 0.9rem;
     vertical-align: middle;
   }
@@ -136,9 +172,9 @@ const ActionCell = styled.td`
 `;
 
 const ActionButton = styled.button`
-  background: #ffffff;
-  border: 1px solid #cfe0ff;
-  color: #0056d6;
+  background: ${props => getColors(props.$spiritual).surface};
+  border: 1px solid ${props => getColors(props.$spiritual).primaryLight};
+  color: ${props => getColors(props.$spiritual).primary};
   cursor: pointer;
   padding: 0.5rem;
   border-radius: 0.375rem;
@@ -151,25 +187,25 @@ const ActionButton = styled.button`
   height: 36px;
 
   &:hover {
-    background: #eaf2ff;
-    color: #0a4db4;
-    border-color: #a8c6ff;
+    background: ${props => getColors(props.$spiritual).primaryLight}30;
+    color: ${props => getColors(props.$spiritual).primaryDark};
+    border-color: ${props => getColors(props.$spiritual).primary};
   }
 `;
 
 const ActionMenu = styled(motion.div)`
   position: absolute;
-  ${(props) => (props.openAbove ? "bottom: calc(100% + 4px);" : "top: calc(100% + 4px);")}
+  ${(props) => (props.$openAbove ? "bottom: calc(100% + 4px);" : "top: calc(100% + 4px);")}
   right: 0;
-  background: #ffffff;
-  border: 1px solid #cfe0ff;
+  background: ${props => getColors(props.$spiritual).surface};
+  border: 1px solid ${props => getColors(props.$spiritual).primaryLight};
   border-radius: 0.5rem;
-  box-shadow: 0 10px 25px rgba(0, 86, 214, 0.15);
+  box-shadow: 0 10px 25px ${props => getColors(props.$spiritual).primary}20;
   min-width: 160px;
   z-index: 1000;
   overflow: hidden;
-  transform-origin: ${(props) => (props.openAbove ? "bottom right" : "top right")};
-  /* Keep menu within viewport when near bottom */
+  transform-origin: ${(props) => (props.$openAbove ? "bottom right" : "top right")};
+  
   @media (max-height: 700px) {
     max-height: 60vh;
     overflow: auto;
@@ -189,30 +225,30 @@ const ActionMenuItem = styled.button`
   border: none;
   text-align: left;
   cursor: pointer;
-  color: #0f172a;
+  color: ${props => getColors(props.$spiritual).textDark};
   font-size: 0.9rem;
   transition: all 0.2s ease;
   display: flex;
   align-items: center;
   gap: 0.75rem;
-  border-bottom: 1px solid #e6efff;
+  border-bottom: 1px solid ${props => getColors(props.$spiritual).primaryLight}50;
 
   &:hover {
-    background: #eaf2ff;
-    color: #0a4db4;
+    background: ${props => getColors(props.$spiritual).primaryLight}30;
+    color: ${props => getColors(props.$spiritual).primaryDark};
   }
 
   &.danger {
-    color: #d64545;
+    color: ${props => getColors(props.$spiritual).accent};
 
     &:hover {
-      background: #ffecec;
+      background: ${props => getColors(props.$spiritual).accent}15;
     }
   }
 
   .icon {
     font-size: 0.9rem;
-    color: #0056d6;
+    color: ${props => getColors(props.$spiritual).primary};
   }
 
   &:last-child {
@@ -223,23 +259,24 @@ const ActionMenuItem = styled.button`
 const EmptyState = styled.div`
   text-align: center;
   padding: 4rem 2rem;
-  color: #3b82f6;
+  color: ${props => getColors(props.$spiritual).primary};
 
   .icon {
     font-size: 4rem;
     margin-bottom: 1rem;
-    color: #a8c6ff;
+    color: ${props => getColors(props.$spiritual).primaryLight};
   }
 
   h3 {
     font-size: 1.2rem;
     margin-bottom: 0.5rem;
-    color: #0f172a;
+    color: ${props => getColors(props.$spiritual).textDark};
   }
 
   p {
     margin: 0;
     opacity: 0.8;
+    color: ${props => getColors(props.$spiritual).textDark};
   }
 `;
 
@@ -254,14 +291,14 @@ const LoadingContainer = styled.div`
   .spinner {
     width: 40px;
     height: 40px;
-    border: 4px solid rgba(0, 86, 214, 0.15);
-    border-top: 4px solid #0056d6;
+    border: 4px solid ${props => getColors(props.$spiritual).primaryLight};
+    border-top: 4px solid ${props => getColors(props.$spiritual).primary};
     border-radius: 50%;
     animation: spin 1s linear infinite;
   }
 
   .loading-text {
-    color: #3b82f6;
+    color: ${props => getColors(props.$spiritual).primary};
     font-size: 0.9rem;
   }
 
@@ -277,12 +314,12 @@ const LoadingContainer = styled.div`
 
 const TableFooter = styled.div`
   padding: 1rem 2rem;
-  border-top: 1px solid #cfe0ff;
+  border-top: 1px solid ${props => getColors(props.$spiritual).primaryLight};
   display: flex;
   justify-content: space-between;
   align-items: center;
-  background: #f3f8ff;
-  color: #3b82f6;
+  background: ${props => getColors(props.$spiritual).background};
+  color: ${props => getColors(props.$spiritual).primary};
   font-size: 0.9rem;
 
   @media (max-width: 768px) {
@@ -300,21 +337,70 @@ const Pagination = styled.div`
 
 const PageButton = styled.button`
   padding: 0.5rem 0.75rem;
-  border: 1px solid #cfe0ff;
-  background: ${(props) => (props.active ? "#0056d6" : "#ffffff")};
-  color: ${(props) => (props.active ? "#ffffff" : "#0056d6")};
+  border: 1px solid ${props => getColors(props.$spiritual).primaryLight};
+  background: ${(props) => (props.$active ? getColors(props.$spiritual).primary : getColors(props.$spiritual).surface)};
+  color: ${(props) => (props.$active ? getColors(props.$spiritual).surface : getColors(props.$spiritual).primary)};
   border-radius: 0.375rem;
   cursor: pointer;
   transition: all 0.2s;
 
   &:hover {
-    background: #eaf2ff;
-    color: #0a4db4;
+    background: ${props => getColors(props.$spiritual).primaryLight}30;
+    color: ${props => getColors(props.$spiritual).primaryDark};
   }
 
   &:disabled {
     opacity: 0.5;
     cursor: not-allowed;
+  }
+`;
+
+const AddButton = styled(motion.button)`
+  background: rgba(255, 255, 255, 0.85); /* soft visible layer */
+  color: #2c3e50; /* SPIRITUAL_DEEP_BLUE for contrast */
+  border: 2px solid rgba(255, 255, 255, 0.6);
+  padding: 0.75rem 1.5rem;
+  border-radius: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+  backdrop-filter: blur(8px);
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+
+  &:hover {
+    background: rgba(248, 244, 230, 0.95); /* SPIRITUAL_CREAM */
+    border-color: #d4af37; /* SPIRITUAL_GOLD */
+    color: #c44536; /* SPIRITUAL_TERRACOTTA for energy */
+    transform: translateY(-2px);
+  }
+
+  &:active {
+    transform: translateY(0);
+    background: rgba(230, 210, 170, 0.9); /* SPIRITUAL_SAND tone */
+  }
+`;
+
+const AddButton2 = styled(motion.button)`
+  background: #005ce6;
+  color: white;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  padding: 0.75rem 1.5rem;
+  border-radius: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+  backdrop-filter: blur(10px);
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  transition: all 0.3s ease;
+
+  &:hover { 
+	background: rgb(0, 72, 179);
+	border-color: rgba(0, 72, 179, 0.5);
+	transform: translateY(-2px);
   }
 `;
 
@@ -335,6 +421,10 @@ const DataTable = ({
   onPageChange,
   totalItems = 0,
   itemsPerPage = 10,
+  spiritual = false, // New prop to enable spiritual theme
+  isDiscountButtonShow= false,
+  setShowDiscountModal,
+  ButtonLable=""
 }) => {
   const [searchTerm, setSearchTerm] = useState("");
   const [activeActionMenu, setActiveActionMenu] = useState(null);
@@ -363,7 +453,7 @@ const DataTable = ({
     try {
       const rect = event.currentTarget.getBoundingClientRect();
       const spaceBelow = window.innerHeight - rect.bottom;
-      const shouldOpenAbove = spaceBelow < 180; // approximate menu height + spacing
+      const shouldOpenAbove = spaceBelow < 180;
       setOpenAboveRowIndex(shouldOpenAbove ? index : null);
     } catch {
       setOpenAboveRowIndex(null);
@@ -380,7 +470,6 @@ const DataTable = ({
     if (action === "view" && onView) onView(item);
   };
 
-  // Close action menu when clicking outside
   useState(() => {
     const handleClickOutside = () => {
       setActiveActionMenu(null);
@@ -395,8 +484,8 @@ const DataTable = ({
 
   if (loading) {
     return (
-      <TableContainer>
-        <LoadingContainer>
+      <TableContainer $spiritual={spiritual}>
+        <LoadingContainer $spiritual={spiritual}>
           <div className="spinner"></div>
           <div className="loading-text">Loading sacred records...</div>
         </LoadingContainer>
@@ -404,24 +493,40 @@ const DataTable = ({
     );
   }
 
+  const ActiveButton = spiritual ? AddButton : AddButton2;
+
+
   return (
-    <TableContainer>
+    <TableContainer $spiritual={spiritual}>
       {searchable && (
-        <TableHeader>
-          <SearchContainer>
+        <TableHeader $spiritual={spiritual}>
+          <SearchContainer $spiritual={spiritual}>
             <FiSearch className="search-icon" />
             <SearchInput
               type="text"
               placeholder="Search sacred records..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
+              $spiritual={spiritual}
             />
           </SearchContainer>
+
+          {isDiscountButtonShow && (
+            <ActiveButton
+              onClick={() => setShowDiscountModal(true)}
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+            >
+              <FiPlus />
+              {ButtonLable}
+            </ActiveButton>
+          )}
+
         </TableHeader>
       )}
 
       {filteredData.length === 0 ? (
-        <EmptyState>
+        <EmptyState $spiritual={spiritual}>
           <div className="icon">{emptyIcon}</div>
           <h3>{emptyTitle}</h3>
           <p>{emptyDescription}</p>
@@ -429,7 +534,7 @@ const DataTable = ({
       ) : (
         <>
           <Table>
-            <TableHead>
+            <TableHead $spiritual={spiritual}>
               <tr>
                 {columns.map((column, index) => (
                   <th key={index}>{column.title}</th>
@@ -458,13 +563,15 @@ const DataTable = ({
                         <ActionButton
                           aria-label="Row actions"
                           onClick={(e) => handleActionClick(rowIndex, e)}
+                          $spiritual={spiritual}
                         >
                           <FiMoreVertical />
                         </ActionButton>
 
                         {activeActionMenu === rowIndex && (
                           <ActionMenu
-                            openAbove={openAboveRowIndex === rowIndex}
+                            $openAbove={openAboveRowIndex === rowIndex}
+                            $spiritual={spiritual}
                             initial={{ opacity: 0, scale: 0.98, y: 0 }}
                             animate={{ opacity: 1, scale: 1, y: 0 }}
                             exit={{ opacity: 0, scale: 0.98, y: 0 }}
@@ -475,6 +582,7 @@ const DataTable = ({
                                 onClick={() =>
                                   handleActionItemClick("view", item)
                                 }
+                                $spiritual={spiritual}
                               >
                                 <FiEye className="icon" />
                                 View Details
@@ -485,6 +593,7 @@ const DataTable = ({
                                 onClick={() =>
                                   handleActionItemClick("edit", item)
                                 }
+                                $spiritual={spiritual}
                               >
                                 <FiEdit className="icon" />
                                 Edit
@@ -496,8 +605,9 @@ const DataTable = ({
                                 onClick={() =>
                                   handleActionItemClick("delete", item)
                                 }
+                                $spiritual={spiritual}
                               >
-                                <FiTrash2 className="icon" />
+                                <FiTrash2 className="icon" color="#d64545" />
                                 Delete
                               </ActionMenuItem>
                             )}
@@ -512,7 +622,7 @@ const DataTable = ({
           </Table>
 
           {pagination && (
-            <TableFooter>
+            <TableFooter $spiritual={spiritual}>
               <div>
                 Showing {(currentPage - 1) * itemsPerPage + 1} to{" "}
                 {Math.min(currentPage * itemsPerPage, totalItems)} of{" "}
@@ -522,6 +632,7 @@ const DataTable = ({
                 <PageButton
                   disabled={currentPage === 1}
                   onClick={() => onPageChange(currentPage - 1)}
+                  $spiritual={spiritual}
                 >
                   Previous
                 </PageButton>
@@ -531,6 +642,7 @@ const DataTable = ({
                 <PageButton
                   disabled={currentPage === totalPages}
                   onClick={() => onPageChange(currentPage + 1)}
+                  $spiritual={spiritual}
                 >
                   Next
                 </PageButton>

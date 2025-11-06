@@ -1,607 +1,371 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useEffect, useState } from "react";
+import CustomerLayout from "../Customer/CustomerLayout";
 import styled from "styled-components";
-import CustomerLayout from "../../components/Customer/CustomerLayout";
 import { gettemplist } from "../../services/productServices";
-import { motion } from "framer-motion";
-import { toast } from "react-toastify";
-import {
-  getmyApplication,
-  processSellerApplication,
-} from "../../services/customerServices";
-import { FaUpload, FaFileAlt } from "react-icons/fa";
-// Styled components
-const HeaderSection = styled(motion.div)`
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  border-radius: 1.5rem;
-  padding: 2rem;
-  color: white;
+import { getmyApplication } from "../../services/customerServices";
+import SellerDataTable from "./ReusableComponents/SellerDataTable";
+import SellerRegistrationFormModal from "./Modal/SellerRegistrationFormModal";
+import TempleDetailsModal from "./Modal/TempleDetailsModal";
+
+const PageContainer = styled.div`
+  background: #f8fafc;
+  min-height: 100vh;
+`;
+
+const PageHeader = styled.h2`
+  color: #1e293b;
+  font-size: 1.875rem;
+  font-weight: 700;
   margin-bottom: 2rem;
-  position: relative;
-  overflow: hidden;
-
-  &::before {
-    content: "";
-    position: absolute;
-    top: 0;
-    right: 0;
-    width: 200px;
-    height: 200px;
-    background: rgba(255, 255, 255, 0.1);
-    border-radius: 50%;
-    transform: translate(50%, -50%);
-  }
-
-  .header-content {
-    position: relative;
-    z-index: 1;
-  }
-
-  .title {
-    font-size: 2.5rem;
-    font-weight: 800;
-    margin-bottom: 0.5rem;
-  }
-
-  .subtitle {
-    font-size: 1.2rem;
-    opacity: 0.9;
-    font-weight: 500;
-  }
-
-  @media (max-width: 768px) {
-    padding: 1.5rem;
-
-    .title {
-      font-size: 2rem;
-    }
-
-    .subtitle {
-      font-size: 1rem;
-    }
-  }
-`;
-
-const Subtitle = styled.h2`
-  color: #555;
-  margin-bottom: 1.5rem;
-`;
-
-const ProgressBar = styled.div`
   display: flex;
-  justify-content: space-between;
-  margin-bottom: 2rem;
-  position: relative;
+  align-items: center;
+  gap: 0.75rem;
 
   &::before {
-    content: "";
-    position: absolute;
-    top: 50%;
-    left: 0;
-    right: 0;
-    height: 2px;
-    background: #ddd;
-    z-index: 1;
+    content: '';
+    width: 4px;
+    height: 32px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border-radius: 2px;
   }
 `;
 
-const ProgressStep = styled.div`
+const TabContainer = styled.div`
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 2rem;
+  border-bottom: 2px solid #e2e8f0;
+`;
+
+const Tab = styled.button`
+  padding: 0.875rem 1.5rem;
+  background: ${props => props.active ? 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' : 'transparent'};
+  color: ${props => props.active ? '#ffffff' : '#64748b'};
+  border: none;
+  border-bottom: 3px solid ${props => props.active ? 'transparent' : 'transparent'};
+  font-weight: 600;
+  font-size: 0.938rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border-radius: 8px 8px 0 0;
   position: relative;
-  z-index: 2;
-  background: ${(props) => (props.active ? "#4CAF50" : "#ddd")};
-  color: ${(props) => (props.active ? "white" : "#777")};
-  padding: 0.5rem 1rem;
-  border-radius: 20px;
-  font-weight: bold;
-`;
+  bottom: -2px;
 
-const Step1Container = styled.div`
-  background: white;
-  padding: 2rem;
-  border-radius: 8px;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-`;
-
-const Step2Container = styled.div`
-  background: white;
-  padding: 2rem;
-  border-radius: 8px;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+  &:hover {
+    background: ${props => props.active ? 'linear-gradient(135deg, #764ba2 0%, #667eea 100%)' : '#f1f5f9'};
+    color: ${props => props.active ? '#ffffff' : '#334155'};
+  }
 `;
 
 const TempleGrid = styled.div`
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
   gap: 1.5rem;
   margin-bottom: 2rem;
 `;
 
 const TempleCard = styled.div`
-  border: 2px solid
-    ${(props) => {
-      if (props.selected) return "#4CAF50";
-      if (props.applied) return "#FFA000";
-      return "#ddd";
-    }};
-  border-radius: 8px;
+  background: #ffffff;
+  border-radius: 12px;
   overflow: hidden;
-  cursor: ${(props) => (props.applied ? "default" : "pointer")};
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+  border: 2px solid #e2e8f0;
   transition: all 0.3s ease;
-  position: relative;
 
-  ${(props) =>
-    !props.applied &&
-    `
-    &:hover {
-      transform: translateY(-5px);
-      box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
-    }
-  `}
+  &:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 8px 16px rgba(102, 126, 234, 0.15);
+    border-color: #667eea;
+  }
 `;
 
-const AppliedBadge = styled.div`
-  position: absolute;
-  top: 10px;
-  right: 10px;
-  background: #ffa000;
-  color: white;
-  padding: 0.25rem 0.5rem;
-  border-radius: 4px;
-  font-size: 0.75rem;
-  font-weight: bold;
-`;
-
-const TempleImage = styled.img`
+const TempleImage = styled.div`
   width: 100%;
-  height: 150px;
-  object-fit: cover;
+  height: 180px;
+  background: ${props => props.src ? `url(${props.src})` : 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'};
+  background-size: cover;
+  background-position: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-size: 3rem;
+`;
+
+const TempleContent = styled.div`
+  padding: 1.25rem;
 `;
 
 const TempleName = styled.h3`
-  padding: 1rem;
-  margin: 0;
-  color: #333;
-`;
-
-const TempleLocation = styled.p`
-  padding: 0 1rem 1rem;
-  margin: 0;
-  color: #777;
-`;
-
-const DocumentList = styled.div`
-  display: grid;
-  gap: 1.5rem;
-  margin-bottom: 2rem;
-`;
-
-const DocumentItem = styled.div`
-  padding: 1.25rem;
-  border: 1px solid #e0e0e0;
-  border-radius: 12px;
-  background: #fff;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
-  transition: all 0.2s ease;
-
-  &:hover {
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-    border-color: #d0d0d0;
-  }
-`;
-
-const DocumentLabel = styled.label`
-  font-size: 1rem;
+  color: #1e293b;
+  font-size: 1.125rem;
   font-weight: 600;
-  color: #222;
-  display: flex;
-  align-items: center;
   margin-bottom: 0.75rem;
 `;
 
-const MandatoryStar = styled.span`
-  color: #e53935;
-  margin-left: 4px;
-`;
-
-const HiddenFileInput = styled.input`
-  display: none;
-`;
-
-const UploadButton = styled.label`
-  display: inline-flex;
+const TempleLocation = styled.p`
+  color: #64748b;
+  font-size: 0.875rem;
+  margin-bottom: 1rem;
+  display: flex;
   align-items: center;
   gap: 0.5rem;
-  padding: 0.6rem 1rem;
-  background: #1976d2;
-  color: white;
-  border-radius: 8px;
-  cursor: pointer;
-  font-size: 0.9rem;
+`;
+
+const ButtonGroup = styled.div`
+  display: flex;
+  gap: 0.75rem;
+`;
+
+const ViewButton = styled.button`
+  flex: 1;
+  padding: 0.625rem;
+  background: #ffffff;
+  color: #667eea;
+  border: 2px solid #667eea;
+  border-radius: 6px;
   font-weight: 500;
-  transition: background 0.2s ease;
+  font-size: 0.875rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
 
   &:hover {
-    background: #1565c0;
+    background: #f8fafc;
   }
 `;
 
-const FileName = styled.div`
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  margin-top: 0.75rem;
-  font-size: 0.9rem;
-  color: #388e3c;
-  font-weight: 500;
-`;
-
-const ButtonContainer = styled.div`
-  display: flex;
-  justify-content: space-between;
-  margin-top: 2rem;
-`;
-
-const Button = styled.button`
-  padding: 0.75rem 1.5rem;
+const ApplyButton = styled.button`
+  flex: 1;
+  padding: 0.625rem;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
   border: none;
-  border-radius: 4px;
-  font-weight: bold;
+  border-radius: 6px;
+  font-weight: 500;
+  font-size: 0.875rem;
   cursor: pointer;
-  transition: background 0.3s ease;
-
-  &:disabled {
-    background: #ccc;
-    cursor: not-allowed;
-  }
-`;
-
-const NextButton = styled(Button)`
-  background: #4caf50;
-  color: white;
-  margin-left: auto;
-
-  &:hover:not(:disabled) {
-    background: #3d8b40;
-  }
-`;
-
-const BackButton = styled(Button)`
-  background: #f1f1f1;
-  color: #333;
+  transition: all 0.2s ease;
 
   &:hover {
-    background: #ddd;
-  }
-`;
-
-const SubmitButton = styled(Button)`
-  background: #2196f3;
-  color: white;
-
-  &:hover:not(:disabled) {
-    background: #0b7dda;
+    background: linear-gradient(135deg, #764ba2 0%, #667eea 100%);
+    transform: translateY(-1px);
   }
 `;
 
 const ErrorMessage = styled.div`
-  background: #ffebee;
-  color: #c62828;
-  padding: 1rem;
-  border-radius: 4px;
-  margin-bottom: 1rem;
-`;
-
-const LoadingText = styled.p`
-  text-align: center;
-  color: #777;
-  font-style: italic;
-`;
-
-const ApplicationStatus = styled.div`
-  margin: 2rem 0;
-  padding: 1.5rem;
+  padding: 1rem 1.25rem;
+  background: #fef2f2;
+  border: 2px solid #fecaca;
   border-radius: 8px;
-  background: ${(props) => (props.isApproved ? "#E8F5E9" : "#FFF8E1")};
-  border-left: 4px solid
-    ${(props) => (props.isApproved ? "#4CAF50" : "#FFA000")};
+  color: #dc2626;
+  margin-bottom: 1.5rem;
+  font-weight: 500;
 `;
 
-const StatusBadge = styled.span`
-  padding: 0.25rem 0.75rem;
-  border-radius: 20px;
-  font-weight: bold;
-  background: ${(props) => (props.isApproved ? "#4CAF50" : "#FFA000")};
-  color: white;
-  margin-right: 1rem;
+const LoadingSpinner = styled.div`
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 3rem;
+  color: #64748b;
+  font-size: 1.125rem;
 `;
+
+const EmptyState = styled.div`
+  text-align: center;
+  color: #94a3b8;
+  font-style: italic;
+  padding: 2rem 0;
+`;
+
+
 
 const SellerRegistration = () => {
-  const [step, setStep] = useState(1);
   const [temples, setTemples] = useState([]);
+  const [allTemples, setAllTemples] = useState([]);
   const [myApplications, setMyApplications] = useState([]);
-  const [selectedTemple, setSelectedTemple] = useState(null);
-  const [documents, setDocuments] = useState({});
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  const nextButtonRef = useRef(null);
+  const [activeTab, setActiveTab] = useState("temples");
+  const [showModal, setShowModal] = useState(false);
+  const [selectedTemple, setSelectedTemple] = useState({});
+  const [templeDetailViewModal, setTempleDetailViewModal] = useState(false);
+  const [uploads, setUploads] = useState({});
 
-  // Fetch temple list and my applications on component mount
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        setLoading(true);
-        const [templeData, applicationData] = await Promise.all([
-          gettemplist(),
-          getmyApplication(),
-        ]);
-        setTemples(templeData.data);
-        setMyApplications(applicationData || []);
-      } catch (err) {
-        setError("Failed to fetch data. Please try again.");
-        console.error(err);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchData();
-  }, []);
-
-  // Check if a temple has already been applied to
-  const hasAppliedToTemple = (templeId) => {
-    return myApplications.some((app) => app.temple_id === templeId);
-  };
-
-  // Get application status for a temple
-  const getApplicationStatus = (templeId) => {
-    return myApplications.find((app) => app.temple_id === templeId);
-  };
-
-  // Handle temple selection
-  const handleTempleSelect = (temple) => {
-    // Don't allow selection if already applied
-    if (hasAppliedToTemple(temple.temple_id)) return;
-
-    // Initialize documents state
-    let docs = {};
-    if (temple.additional_field_list.supplier_document_name_list) {
-      setSelectedTemple(temple);
-      temple.additional_field_list.supplier_document_name_list.forEach(
-        (doc, index) => {
-          docs[`document_file_${index + 1}`] = null;
-        }
-      );
-    } else {
-      toast.error("No document list found for this temple.");
-      return;
-    }
-
-    setDocuments(docs || []);
-
-    // Scroll to next button after a short delay to allow state update
-    setTimeout(() => {
-      if (nextButtonRef.current) {
-        nextButtonRef.current.scrollIntoView({
-          behavior: "smooth",
-          block: "center",
-        });
-      }
-    }, 100);
-  };
-
-  // Handle file input change
-  const handleFileChange = (e, index) => {
-    const file = e.target.files[0];
-    if (file) {
-      setDocuments({
-        ...documents,
-        [`document_file_${index + 1}`]: file,
-      });
-    }
-  };
-
-  // Handle form submission
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setLoading(true);
-    setError("");
-
+  const fetchData = async () => {
     try {
-      const sellerRefCode = localStorage.getItem("customerRefCode");
-      if (!sellerRefCode) {
-        throw new Error("Seller reference code not found. Please login again.");
-      }
-
-      const formData = new FormData();
-      formData.append("temple_id", selectedTemple.temple_id);
-      formData.append("call_mode", "ADD_SELLER_DOCUMENT");
-      formData.append("seller_ref_code", sellerRefCode);
-
-      // Append all document files
-      Object.keys(documents).forEach((key) => {
-        if (documents[key]) {
-          formData.append(key, documents[key]);
-        }
-      });
-
-      const response = await processSellerApplication(formData);
-      console.log(response, "response");
-      if (response.status !== 200) {
-        throw new Error("Registration failed. Please try again.");
-      }
-      // Registration successful
-      toast.success("Registration successful!");
-
-      // Refresh applications list
-      const applicationData = await getmyApplication();
+      setLoading(true);
+      const [templeData, applicationData] = await Promise.all([
+        gettemplist(),
+        getmyApplication(),
+      ]);
+      const is_document_required_temple = templeData.data.filter((temple) => 
+        temple.additional_field_list && 
+        Object.keys(temple.additional_field_list).length > 0 && 
+        temple.additional_field_list.supplier_document_name_list && 
+        Array.isArray(temple.additional_field_list.supplier_document_name_list) &&
+        temple.additional_field_list.supplier_document_name_list.length > 0
+      );
+      setTemples(is_document_required_temple);
+      setAllTemples(templeData.data)
       setMyApplications(applicationData || []);
-
-      // Reset form
-      setSelectedTemple(null);
-      setDocuments({});
-      setStep(1);
+      console.log(applicationData)
     } catch (err) {
-      setError(err.message);
-      toast.error(err.message);
+      setError("Failed to fetch data. Please try again.");
+      console.error(err);
     } finally {
       setLoading(false);
     }
   };
+  useEffect(() => {
+    fetchData();
+  }, []);
 
-  // Check if all mandatory documents are uploaded
-  const canProceedToStep2 = () => {
-    if (!selectedTemple) return false;
-
-    const mandatoryDocs =
-      selectedTemple.additional_field_list.supplier_document_name_list.filter(
-        (doc) => doc.is_mandatory === "True"
-      );
-
-    return mandatoryDocs.every(
-      (doc, index) => documents[`document_file_${index + 1}`]
-    );
+  const handleApplyClick = (templeId, mode, SellerApplication) => {
+    const temple = allTemples.find((t) => t.temple_id === templeId);
+    if (!temple) {
+      console.warn("Temple not found:", templeId);
+      return;
+    }
+    setSelectedTemple({ ...temple, mode, SellerApplication });
+    // console.log({ ...temple, mode, SellerApplication  });
+    setShowModal(true);
+    setUploads({});
   };
+
+  const handleViewDetails = (temple) => {
+    setTempleDetailViewModal(true);
+    setSelectedTemple(temple)
+  };
+
+  const columns = [
+    {
+      key: 'temple_name',
+      title: 'Temple Name',
+      type: 'text'
+    },
+    {
+      key: 'status_display',
+      title: 'Status',
+      type: 'status'
+    },
+    {
+      key: 'approved_by',
+      title: 'Approved By',
+      type: 'text'
+    },
+    // {
+    //   key: 'document_file_1',
+    //   title: 'Document',
+    //   type: 'text'
+    // },
+    {
+      key: 'actions',
+      title: 'Actions',
+      type: 'actions',
+      buttons: [
+        {
+          label: 'Edit',
+          onClick:  (temple) => handleApplyClick( temple.temple_id, "update", temple),
+          hidden: (row) => row.is_approve === true
+        }
+      ],
+      menuItems: [
+        {
+          label: 'View Details',
+          onClick: (row) => console.log('View:', row)
+        },
+        {
+          label: 'Duplicate',
+          onClick: (row) => console.log('Duplicate:', row)
+        },
+        {
+          label: 'Delete',
+          onClick: (row) => console.log('Delete:', row)
+        }
+      ]
+    }
+  ];
+
+  if (loading) {
+    return (
+      <CustomerLayout>
+        <PageContainer>
+          <LoadingSpinner>Loading...</LoadingSpinner>
+        </PageContainer>
+      </CustomerLayout>
+    );
+  }
 
   return (
     <CustomerLayout>
-      <HeaderSection
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.6 }}
-      >
-        <div className="title">📝 Seller Registration</div>
-        <div className="subtitle">
-          Discover divine temples and Register your spiritual journey with us
-        </div>
-      </HeaderSection>
+      <PageContainer>
+        <PageHeader>Temple Association</PageHeader>
+        
+        {error && <ErrorMessage>{error}</ErrorMessage>}
 
-      {myApplications.length > 0 && (
-        <ApplicationStatus isApproved={myApplications[0].is_approved}>
-          <h3>Your Applications</h3>
-          {myApplications.map((app) => (
-            <div key={app.temple_id} style={{ marginBottom: "1rem" }}>
-              <StatusBadge isApproved={app.is_approved}>
-                {app.is_approved ? "Approved" : "Pending"}
-              </StatusBadge>
-              <strong>{app.temple_name}</strong>
-              <div style={{ fontSize: "0.9rem", marginTop: "0.5rem" }}>
-                Status: {app.is_active ? "Active" : "Inactive"}
-                {app.approved_date && ` | Approved on: ${app.approved_date}`}
-              </div>
-            </div>
-          ))}
-        </ApplicationStatus>
-      )}
+        <TabContainer>
+          <Tab active={activeTab === "temples"} onClick={() => setActiveTab("temples")}>
+            All Temples
+          </Tab>
+          <Tab active={activeTab === "applications"} onClick={() => setActiveTab("applications")}>
+            My Applications
+          </Tab>
+        </TabContainer>
 
-      <ProgressBar>
-        <ProgressStep active={step >= 1}>1. Select Temple</ProgressStep>
-        <ProgressStep active={step >= 2}>2. Upload Documents</ProgressStep>
-      </ProgressBar>
-
-      {error && <ErrorMessage>{error}</ErrorMessage>}
-
-      {step === 1 && (
-        <Step1Container>
-          <Subtitle>Select a Temple to Register As Seller</Subtitle>
-
-          {loading ? (
-            <LoadingText>Loading temples...</LoadingText>
-          ) : (
-            <TempleGrid>
-              {temples.map((temple) => {
-                const applied = hasAppliedToTemple(temple.temple_id);
-                const application = applied
-                  ? getApplicationStatus(temple.temple_id)
-                  : null;
-
-                return (
-                  <TempleCard
-                    key={temple.temple_id}
-                    selected={selectedTemple?.temple_id === temple.temple_id}
-                    applied={applied}
-                    onClick={() => handleTempleSelect(temple)}
-                  >
-                    {applied && (
-                      <AppliedBadge>
-                        {application.is_approved ? "Approved" : "Applied"}
-                      </AppliedBadge>
-                    )}
-                    <TempleImage
-                      src={temple.image || "/placeholder-temple.jpg"}
-                      alt={temple.name}
-                    />
+        {activeTab === "temples" && (
+          <TempleGrid>
+            {temples.length > 0 ? (
+              temples.map((temple, index) => (
+                <TempleCard key={index}>
+                  <TempleImage src={temple.image}>
+                    {!temple.image && "🛕"}
+                  </TempleImage>
+                  <TempleContent>
                     <TempleName>{temple.name}</TempleName>
-                    <TempleLocation>{temple.location}</TempleLocation>
-                    {applied && application && (
-                      <div
-                        style={{ padding: "0 1rem 1rem", fontSize: "0.8rem" }}
-                      >
-                        Status:{" "}
-                        {application.is_approved ? "Approved" : "Pending"}
-                      </div>
-                    )}
-                  </TempleCard>
-                );
-              })}
-            </TempleGrid>
-          )}
+                    <TempleLocation>
+                      <span>📍</span>
+                      {temple.location || "Location not specified"}
+                    </TempleLocation>
+                    <ButtonGroup>
+                      <ViewButton onClick={() => handleViewDetails(temple)}>
+                        View Details
+                      </ViewButton>
 
-          <ButtonContainer ref={nextButtonRef}>
-            <NextButton onClick={() => setStep(2)} disabled={!selectedTemple}>
-              Next
-            </NextButton>
-          </ButtonContainer>
-        </Step1Container>
-      )}
-
-      {step === 2 && selectedTemple && (
-        <Step2Container>
-          <Subtitle>
-            Upload Required Documents for {selectedTemple.name}
-          </Subtitle>
-
-          <DocumentList>
-            {selectedTemple.additional_field_list.supplier_document_name_list.map(
-              (doc, index) => (
-                <DocumentItem key={index}>
-                  <DocumentLabel>
-                    {doc.name}{" "}
-                    {doc.is_mandatory === "True" && (
-                      <MandatoryStar>*</MandatoryStar>
-                    )}
-                  </DocumentLabel>
-
-                  {/* Upload button (styled label linked to hidden input) */}
-                  <UploadButton htmlFor={`file-upload-${index}`}>
-                    <FaUpload /> Upload File
-                  </UploadButton>
-                  <HiddenFileInput
-                    id={`file-upload-${index}`}
-                    type="file"
-                    onChange={(e) => handleFileChange(e, index)}
-                    required={doc.is_mandatory === "True"}
-                  />
-                  {documents[`document_file_${index + 1}`] && (
-                    <FileName>
-                      <FaFileAlt />{" "}
-                      {documents[`document_file_${index + 1}`].name}
-                    </FileName>
-                  )}
-                </DocumentItem>
-              )
+                      <ApplyButton onClick={() => handleApplyClick(temple.temple_id, "apply")}>
+                        Apply
+                      </ApplyButton>
+                    </ButtonGroup>
+                  </TempleContent>
+                </TempleCard>
+              ))
+            ) : (
+              <EmptyState>No temples available</EmptyState>
             )}
-          </DocumentList>
+          </TempleGrid>
+        )}
 
-          <ButtonContainer>
-            <BackButton onClick={() => setStep(1)}>Back</BackButton>
-            <SubmitButton
-              onClick={handleSubmit}
-              disabled={!canProceedToStep2() || loading}
-            >
-              {loading ? "Submitting..." : "Complete Registration"}
-            </SubmitButton>
-          </ButtonContainer>
-        </Step2Container>
-      )}
+        {activeTab === "applications" && (
+          <SellerDataTable
+            columns={columns}
+            data={myApplications}
+            onSelectionChange={(ids) => console.log('Selected:', ids)}
+          />
+          // <DataTable
+          // columns={columns}
+          // data={myApplications}
+          // onEdit={() => handleApplyClick(selectedTemple)}
+          
+          // />
+        )}
+
+        {showModal && selectedTemple && (
+          <SellerRegistrationFormModal selectedTemple={selectedTemple} setSelectedTemple={setSelectedTemple} setShowModal={setShowModal} fetchData={fetchData} />
+        )}
+        {templeDetailViewModal && 
+        <TempleDetailsModal temple={selectedTemple} isOpen={templeDetailViewModal} onClose={() => setTempleDetailViewModal(false)} />
+        }
+      </PageContainer>
     </CustomerLayout>
   );
 };

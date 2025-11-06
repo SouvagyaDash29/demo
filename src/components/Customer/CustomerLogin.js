@@ -334,12 +334,22 @@ const CustomerLogin = () => {
   const pathname = window.location.pathname;
   const adminId = localStorage.getItem("userToken");
   const userId = localStorage.getItem("customerToken");
+  const customerRefCode = localStorage.getItem("customerRefCode");
+
+  const redirectToDashboard = () => {
+  const isSeller = customerRefCode?.startsWith("S");
+  const currentPath = window.location.pathname;
+  const targetPath = isSeller ? "/seller-Dashboard" : "/customer-dashboard";
+
+  if (currentPath !== targetPath) {
+    window.location.href = targetPath;
+  }
+};
+
   useEffect(() => {
-    const currentPath = window.location.pathname;
-    if (userId && currentPath !== "/customer-dashboard") {
-      window.location.href = "/customer-dashboard";
-    }
-  }, []);
+  if (userId) redirectToDashboard();
+}, [userId]);
+
   const handleChange = (e) => {
     setCredentials({
       ...credentials,
@@ -363,7 +373,7 @@ const CustomerLogin = () => {
       login(response);
 
       // Navigate to customer dashboard
-      window.location.href = "/customer-dashboard";
+      redirectToDashboard();
     } catch (err) {
       setError(err.message || "Login failed. Please check your credentials.");
     } finally {
@@ -373,7 +383,6 @@ const CustomerLogin = () => {
   const navigatetopage = (path) => {
     navigate(path);
   };
-  console.log(pathname, "pathname");
   return (
     <LoginContainer>
       <LoginCard>

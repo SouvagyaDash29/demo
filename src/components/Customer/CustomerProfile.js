@@ -1,10 +1,29 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import styled from "styled-components";
 import { useCustomerAuth } from "../../contexts/CustomerAuthContext";
 import CustomerLayout from "../../components/Customer/CustomerLayout";
 import SetNewPinPopup from "./CustomerModal/SetNewPin";
+import { getSellerAllList } from "../../services/customerServices";
+
+const seller_Color_palttels = {
+  Primary: "#8B5CF6",
+  Accent:	"#FACC15",
+Background:	"#F9FAFB" ,
+ white:	"#FFFFFF",
+Text_Primary:	"#1F2937",
+Text_Secondary:	"#6B7280",
+Success:	"#10B981",
+Warning:	"#F59E0B",
+Error:	"#EF4444",
+blue: "#667EEA",
+purple: "#764BA2",
+linear_gradient: "linear-gradient(135deg, rgb(102, 126, 234) 0%, rgb(118, 75, 162) 100%)",
+backgroung_linear_gradient: "linear-gradient(135deg, rgba(255, 255, 255, 0.24), rgba(255, 255, 255, 0.14))",
+menuItems_hover: "linear-gradient(145deg, #764ba2, #7c3aed)",
+GLASS_BG_HOVER : "linear-gradient(135deg, rgb(255 255 255 / 24%), rgb(255 255 255 / 14%))",
+}
 
 const MaxWidthContainer = styled.div`
   max-width: 1200px;
@@ -36,7 +55,7 @@ const ProfileSection = styled.div`
 const Avatar = styled.div`
   width: 80px;
   height: 80px;
-  background: linear-gradient(145deg, rgb(212, 175, 55), rgb(196, 69, 54));
+  background: ${(props) => props.isSeller ? seller_Color_palttels.linear_gradient : "linear-gradient(145deg, rgb(212, 175, 55), rgb(196, 69, 54))"};
   border-radius: 50%;
   display: flex;
   align-items: center;
@@ -68,23 +87,19 @@ const ProfileInfo = styled.div`
 
 const EditButton = styled.button`
   padding: 12px 24px;
-  background: linear-gradient(145deg, rgb(212, 175, 55), rgb(196, 69, 54));
+  background: ${(props) => props.isSeller? seller_Color_palttels.linear_gradient : "linear-gradient(145deg, rgb(212, 175, 55), rgb(196, 69, 54))"};
   color: white;
   border: none;
   border-radius: 8px;
   cursor: pointer;
   font-weight: 500;
   transition: all 0.2s ease;
-  box-shadow: 0 4px 12px rgba(249, 115, 22, 0.3);
+  box-shadow: 0 4px 12px ${(props) => props.isSeller? "" :"rgba(249, 115, 22, 0.3)"};
 
   &:hover {
-    background: linear-gradient(
-      145deg,
-      rgba(212, 120, 55, 1),
-      rgba(135, 46, 36, 1)
-    );
+    background: ${(props) => props.isSeller ? "red" : "linear-gradient(145deg,rgba(212, 120, 55, 1),rgba(135, 46, 36, 1))"}
     transform: translateY(-1px);
-    box-shadow: 0 6px 16px rgba(249, 115, 22, 0.4);
+    box-shadow: 0 6px 16px ${(props) => props.isSeller? "" :" rgba(249, 115, 22, 0.4)"};
   }
 `;
 
@@ -94,7 +109,7 @@ const GridContainer = styled.div`
   gap: 24px;
 
   @media (min-width: 1024px) {
-    grid-template-columns: 2fr 1fr;
+    grid-template-columns: ${(props) => props.isSeller ? "1fr" : "2fr 1fr"};
   }
 `;
 
@@ -434,17 +449,20 @@ const ActionButton = styled.button`
 `;
 
 const CustomerProfile = () => {
-  const { customer } = useCustomerAuth();
+  const { customer, sellerProfile } = useCustomerAuth();
   const currentCustomerId = localStorage.getItem("customerId");
   const [isEditing, setIsEditing] = useState(false);
   const [showPinPopup, setShowPinPopup] = useState(false);
   const [formData, setFormData] = useState({
     name: "Rajesh Kumar",
-    email: "rajesh.kumar@email.com",
-    phone: "+91 9876543210",
+    email_id: "rajesh.kumar@email.com",
+    mobile_number: "+91 9876543210",
     address: "123 Temple Street, Bangalore, Karnataka 560001",
+    address_line_1: "123 Temple Street, Bangalore, Karnataka 560001",
+    address_line_2: "123 Temple Street, Bangalore, Karnataka 560001",
+    address_line_3: "123 Temple Street, Bangalore, Karnataka 560001",
     dateOfBirth: "1985-06-15",
-    emergencyContact: "+91 9876543211",
+    alternate_contact_number: "+91 9876543211",
     preferredLanguage: "English",
     notifications: {
       email: true,
@@ -452,6 +470,24 @@ const CustomerProfile = () => {
       whatsapp: false,
     },
   });
+
+  useEffect(() => {
+  if (sellerProfile) {
+    const profileData = sellerProfile;
+    
+    // Merge with default to ensure all fields exist
+    setFormData(prevData => ({
+      ...prevData, // Keep default values
+      ...profileData, // Override with sellerProfile data
+      notifications: {
+        ...prevData.notifications, // Default notifications
+        ...(profileData.notifications || {}) // Profile notifications if exist
+      }
+    }));
+  }
+}, [sellerProfile]);
+  const customerCode = localStorage.getItem("customerRefCode");
+  const isSeller = customerCode?.startsWith("S");
 
   // Hardcoded booking statistics
   const bookingStats = {
@@ -531,7 +567,7 @@ const CustomerProfile = () => {
         <HeaderCard>
           <HeaderContent>
             <ProfileSection>
-              <Avatar>{getInitials(formData.name)}</Avatar>
+              <Avatar isSeller={isSeller}>{getInitials(formData.name)}</Avatar>
               <ProfileInfo>
                 <h1>{formData.name}</h1>
                 <p className="email">{formData.email}</p>
@@ -539,17 +575,17 @@ const CustomerProfile = () => {
               </ProfileInfo>
             </ProfileSection>
             <div style={{ display: "flex", gap: "12px" }}>
-              <EditButton onClick={() => setIsEditing(!isEditing)}>
+              <EditButton onClick={() => setIsEditing(!isEditing)} isSeller={isSeller}>
                 {isEditing ? "Cancel" : "Edit Profile"}
               </EditButton>
-              <EditButton onClick={() => setShowPinPopup(true)}>
+              <EditButton onClick={() => setShowPinPopup(true)} isSeller={isSeller}>
                 Update PIN
               </EditButton>
             </div>
           </HeaderContent>
         </HeaderCard>
 
-        <GridContainer>
+        <GridContainer isSeller={isSeller}>
           {/* Profile Information */}
           <Card>
             <CardTitle>Profile Information</CardTitle>
@@ -575,11 +611,11 @@ const CustomerProfile = () => {
                   <Input
                     type="email"
                     name="email"
-                    value={formData.email}
+                    value={formData.email_id}
                     onChange={handleInputChange}
                   />
                 ) : (
-                  <StaticText>{formData.email}</StaticText>
+                  <StaticText>{formData.email_id}</StaticText>
                 )}
               </FormGroup>
 
@@ -589,11 +625,11 @@ const CustomerProfile = () => {
                   <Input
                     type="tel"
                     name="phone"
-                    value={formData.phone}
+                    value={formData.mobile_number}
                     onChange={handleInputChange}
                   />
                 ) : (
-                  <StaticText>{formData.phone}</StaticText>
+                  <StaticText>{formData.mobile_number}</StaticText>
                 )}
               </FormGroup>
 
@@ -618,12 +654,12 @@ const CustomerProfile = () => {
                 {isEditing ? (
                   <TextArea
                     name="address"
-                    value={formData.address}
+                    value={formData.address || formData.address_line_1 || formData.address_line_2 || formData.address_line_3}
                     onChange={handleInputChange}
                     rows="3"
                   />
                 ) : (
-                  <StaticText>{formData.address}</StaticText>
+                  <StaticText>{formData.address || formData.address_line_1 || formData.address_line_2 || formData.address_line_3}</StaticText>
                 )}
               </FormGroup>
 
@@ -633,11 +669,11 @@ const CustomerProfile = () => {
                   <Input
                     type="tel"
                     name="emergencyContact"
-                    value={formData.emergencyContact}
+                    value={formData.alternate_contact_number}
                     onChange={handleInputChange}
                   />
                 ) : (
-                  <StaticText>{formData.emergencyContact}</StaticText>
+                  <StaticText>{formData.alternate_contact_number}</StaticText>
                 )}
               </FormGroup>
 
@@ -705,7 +741,7 @@ const CustomerProfile = () => {
           </Card>
 
           {/* Statistics and Recent Activity */}
-          <div>
+         {!isSeller && <div>
             {/* Booking Statistics */}
             <SidebarCard style={{ marginBottom: "24px" }}>
               <CardTitle>Booking Statistics</CardTitle>
@@ -788,7 +824,7 @@ const CustomerProfile = () => {
                 </ActionButton>
               </QuickActionsGrid>
             </SidebarCard>
-          </div>
+          </div>}
         </GridContainer>
       </MaxWidthContainer>
       {showPinPopup && (

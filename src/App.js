@@ -40,6 +40,13 @@ import SellerRegistration from "./components/Seller/SellerRegistartion";
 import TempleGroup from "./components/Admin/TempleGroup";
 import SellerApproval from "./components/Seller/SellerApproval";
 import AdminServices from "./components/Admin/AdminServices";
+import SellerDashboard from "./components/Seller/SellerDashboard";
+import SellerProduct from "./components/Seller/SellerProduct";
+import SellerOrder from "./components/Seller/SellerOrder";
+import AddProduct from "./components/Seller/AddProduct";
+import OrderDetailsPage from "./components/Seller/OrderDetailsPage";
+import AddVariation from "./components/Seller/AddVariation";
+import CatalogSteup from "./components/Admin/CatalogSteup";
 
 function AppContent() {
   const location = useLocation();
@@ -58,6 +65,7 @@ function AppContent() {
     "/add-groups",
     "/sellerApproval",
     "/admin-services",
+    "/catalog-setup"
   ].some((route) => location.pathname.startsWith(route));
 
   const isCustomerRoute = [
@@ -70,6 +78,14 @@ function AppContent() {
     "/customer-services",
     "/customer-profile",
     "/seller-Application",
+    "/seller-Dashboard",
+    "/seller-Products",
+    "/seller-Orders",
+    "/seller-AddProduct",
+    "/seller-Profile",
+    "/seller-Order-details",
+    "/seller-EditProduct",
+    "/seller-AddVariation"
   ].some((route) => location.pathname.startsWith(route));
 
   const hideNavAndFooter = isAdminRoute || isCustomerRoute;
@@ -105,6 +121,14 @@ function AppContent() {
           element={
             <AdminLayout>
               <TempleGroup />
+            </AdminLayout>
+          }
+        />
+        <Route
+          path="/catalog-setup"
+          element={
+            <AdminLayout>
+              <CatalogSteup />
             </AdminLayout>
           }
         />
@@ -185,7 +209,16 @@ function AppContent() {
         <Route path="/customer-bookings" element={<CustomerBookings />} />
         <Route path="/customer-profile" element={<CustomerProfile />} />
         <Route path="/book-seva/:templeId" element={<BookSeva />} />
+        {/* <Route path="/seller-Application" element={<SellerRegistration />} /> */}
+        <Route path="/seller-Dashboard" element={<SellerDashboard />} />
         <Route path="/seller-Application" element={<SellerRegistration />} />
+        <Route path="/seller-Products" element={<SellerProduct />} />
+        <Route path="/seller-Orders" element={<SellerOrder />} />
+        <Route path="/seller-Order-details" element={<OrderDetailsPage />} />
+        <Route path="/seller-AddProduct" element={<AddProduct />} />
+        <Route path="/seller-EditProduct" element={<AddProduct />} />
+        <Route path="/seller-AddVariation" element={<AddVariation />} />
+        <Route path="/seller-Profile" element={<CustomerProfile />} />
         <Route
           path="/customer-services/:serviceId"
           element={<ServiceDetails />}
